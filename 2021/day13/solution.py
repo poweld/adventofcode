@@ -128,29 +128,7 @@ def part1(filename):
     return m.getDotCount()
 
 def part2(filename):
-    lines = getLines(filename)
-    coords = list(parseLines(lines))
-    pprint(coords)
-    folds = list()
-    for line in lines:
-        parts = line.split(" ")
-        parts = parts[-1].split("=")
-        parts[1] = int(parts[1])
-        if parts[0] == "x":
-            parts[0] = "col"
-        else:
-            parts[0] = "row"
-        folds.append(tuple(parts))
-    pprint(folds)
-    m = Map(coords)
-    # print(m)
-    # pprint(folds)
-    for fold in [folds]:
-        # print(f"applying fold={fold}")
-        m.fold(fold)
-        # print(m)
-    print(m)
-    return m.getDotCount()
+    pass
 
 if __name__ == "__main__":
     main()
