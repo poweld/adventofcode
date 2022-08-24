@@ -152,19 +152,23 @@ func main() {
 }
 
 func hitsPrint(hits map[coord]int, rows int, cols int) {
+    log.Printf("hitsPrint: rows: %v, cols: %v\n", rows, cols)
     s := "\n"
     for row := 0; row <= rows; row++ {
+        rowDots := 0
         for col := 0; col <= cols; col++ {
             c := coord{row: row, col: col}
             count, exists := hits[c]
             if exists {
                 //s += fmt.Sprintf("%d", count)
+                s += strings.Repeat(".", rowDots)
+                rowDots = 0
                 s += strconv.Itoa(count)
             } else {
-                s += "."
+                rowDots++
             }
         }
-        s += "\n"
+        s += strings.Repeat(".", rowDots) + "\n"
     }
     log.Println(s)
 }
@@ -193,7 +197,7 @@ func part1(path string) {
         }
         //hitsPrint(hits, rows, cols)
     }
-    //hitsPrint(hits, rows, cols)
+    // hitsPrint(hits, rows, cols)
     //log.Println("hits:", hits)
     overlaps := 0
     for _, val := range hits {
