@@ -36,13 +36,13 @@ func getLines(path string) ([]string, error) {
 }
 
 type coord struct {
-    x, y int
+    row, col int
 }
 
 type segment []coord
 
 func (c coord) String() string {
-    return fmt.Sprintf("{%d, %d}", c.x, c.y)
+    return fmt.Sprintf("{%d, %d}", c.col, c.row)
 }
 
 func abs(x int) int {
@@ -53,40 +53,47 @@ func abs(x int) int {
 }
 
 func (cFrom coord) segmentTo(cTo coord) segment {
-    deltaY := abs(cTo.y - cFrom.y)
-    deltaX := abs(cTo.x - cFrom.x)
+    // log.Printf("making segment from %#v to %#v\n", cFrom, cTo)
+    deltaRow := abs(cTo.row - cFrom.row)
+    deltaCol := abs(cTo.col - cFrom.col)
     var seg segment
     var start coord
     var end coord
-    if deltaX == 0 {
+    if deltaCol == 0 {
         // vertical line
-        if cFrom.y < cTo.y {
+        if cFrom.row < cTo.row {
             start = cFrom
             end = cTo
         } else {
             start = cTo
             end = cFrom
         }
-        x := cFrom.x
-        seg := make(segment, 0, deltaY)
-        for y := start.y; y < end.y; y++ {
-            seg = append(seg, coord{x, y})
+        col := cFrom.col
+        seg = make(segment, 0, deltaRow)
+        for row := start.row; row <= end.row; row++ {
+            seg = append(seg, coord{row: row, col: col})
         }
     } else {
-        if cFrom.x < cTo.x {
+        if cFrom.col < cTo.col {
             start = cFrom
             end = cTo
         } else {
             start = cTo
             end = cFrom
         }
-        slope := deltaY / deltaX
-        seg = make(segment, 0, deltaX)
+        slope := deltaRow / deltaCol
+        if slope != 0 {
+            // NOTE: ignoring diagonals
+            return make(segment, 0)
+        }
+        // log.Printf("cFrom: %#v, cTo: %#v, slope: %+v", cFrom, cTo, slope)
+        seg = make(segment, 0, deltaCol)
         //for x, y := start.x, start.y; x < end.x; x++, y += slope {
-        for x, y := start.x, start.y; x < end.x; x, y = x + 1, y + slope {
-            seg = append(seg, coord{x, y})
+        for col, row := start.col, start.row; col <= end.col; col, row = col + 1, row + slope {
+            seg = append(seg, coord{row: row, col: col})
         }
     }
+    // log.Printf("returning %#v", seg)
     return seg
 }
 
@@ -105,7 +112,7 @@ func makeCoord(coordStr string) coord {
         check(err)
         components[i] = component
     }
-    return coord{components[0], components[1]}
+    return coord{col: components[0], row: components[1]}
 }
 
 func help() {
@@ -144,14 +151,38 @@ func main() {
     }
 }
 
+func hitsPrint(hits map[coord]int, rows int, cols int) {
+    s := "\n"
+    for row := 0; row <= rows; row++ {
+        for col := 0; col <= cols; col++ {
+            c := coord{row: row, col: col}
+            count, exists := hits[c]
+            if exists {
+                //s += fmt.Sprintf("%d", count)
+                s += strconv.Itoa(count)
+            } else {
+                s += "."
+            }
+        }
+        s += "\n"
+    }
+    log.Println(s)
+}
+
 func part1(path string) {
     log.SetPrefix("part1: ")
     lines, err := getLines(path)
     check(err)
     hits := make(map[coord]int)
+    rows, cols := 0, 0
     for _, line := range lines {
         coord1, coord2 := parseLine(line)
+        if coord1.row > rows { rows = coord1.row }
+        if coord2.row > rows { rows = coord2.row }
+        if coord1.col > cols { cols = coord1.col }
+        if coord2.col > cols { cols = coord2.col }
         seg := coord1.segmentTo(coord2)
+        // log.Println("seg:", seg)
         for _, c := range seg {
             _, exists := hits[c]
             if exists {
@@ -160,7 +191,9 @@ func part1(path string) {
                 hits[c] = 1
             }
         }
+        //hitsPrint(hits, rows, cols)
     }
+    //hitsPrint(hits, rows, cols)
     //log.Println("hits:", hits)
     overlaps := 0
     for _, val := range hits {
