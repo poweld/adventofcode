@@ -52,7 +52,7 @@ func abs(x int) int {
     return x
 }
 
-func (cFrom coord) segmentTo(cTo coord) segment {
+func (cFrom coord) segmentTo(cTo coord, ignoreDiagonals bool) segment {
     // log.Printf("making segment from %#v to %#v\n", cFrom, cTo)
     deltaRow := abs(cTo.row - cFrom.row)
     deltaCol := abs(cTo.col - cFrom.col)
@@ -82,7 +82,7 @@ func (cFrom coord) segmentTo(cTo coord) segment {
             end = cFrom
         }
         slope := deltaRow / deltaCol
-        if slope != 0 {
+        if slope != 0 && ignoreDiagonals {
             // NOTE: ignoring diagonals
             return make(segment, 0)
         }
@@ -185,7 +185,7 @@ func part1(path string) {
         if coord2.row > rows { rows = coord2.row }
         if coord1.col > cols { cols = coord1.col }
         if coord2.col > cols { cols = coord2.col }
-        seg := coord1.segmentTo(coord2)
+        seg := coord1.segmentTo(coord2, true)
         // log.Println("seg:", seg)
         for _, c := range seg {
             _, exists := hits[c]
@@ -211,4 +211,37 @@ func part1(path string) {
 
 func part2(path string) {
     log.SetPrefix("part2: ")
+    lines, err := getLines(path)
+    check(err)
+    hits := make(map[coord]int)
+    rows, cols := 0, 0
+    for _, line := range lines {
+        coord1, coord2 := parseLine(line)
+        // dp-> can't figure out why, but rows and cols aren't growing as fast
+        // dp-> as they should be :-/
+        if coord1.row + 1 > rows { rows = coord1.row + 1 }
+        if coord2.row + 1 > rows { rows = coord2.row + 1 }
+        if coord1.col + 1 > cols { cols = coord1.col + 1 }
+        if coord2.col + 1 > cols { cols = coord2.col + 1 }
+        seg := coord1.segmentTo(coord2, false)
+        for _, c := range seg {
+            _, exists := hits[c]
+            if exists {
+                hits[c]++
+            } else {
+                hits[c] = 1
+            }
+        }
+        log.Printf("seg: %#v\n", seg)
+        hitsPrint(hits, rows, cols)
+    }
+    hitsPrint(hits, rows, cols)
+    //log.Println("hits:", hits)
+    overlaps := 0
+    for _, val := range hits {
+        if val > 1 {
+            overlaps++
+        }
+    }
+    log.Println("overlaps:", overlaps)
 }
