@@ -10,7 +10,9 @@
                #:result (reverse acc))
               ([line (in-list lines)])
       (if (non-empty-string? line)
+        ; Convert string to number and add to current group
         (values acc (cons (string->number line) current-group))
+        ; Empty string - add current group to acc
         (values (cons (reverse current-group) acc) '())))))
 
 (define input-file "input.txt")
