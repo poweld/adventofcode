@@ -20,5 +20,7 @@
 (define sorted-sums
   (sort (map sum (load-data input-file)) <))
 
+; Part 1
 (last sorted-sums)
+; Part 2
 (sum (take-right sorted-sums 3))
