@@ -38,25 +38,6 @@
         losePoints
         drawPoints))))
 
-;(define (playRPS rounds)
-;  (define (playRPSRec rounds score)
-;    (if (empty? rounds)
-;      score
-;      (let* ([round (first rounds)]
-;             [op-move (first round)]
-;             [my-move (last round)])
-;        (begin
-;          (printf "Current Score: ~a\nOpponent move: ~s, My move: ~s\n" score op-move my-move)
-;          (let ([newScore (+ score (scoreMove op-move my-move))])
-;            (playRPSRec (rest rounds) newScore))))))
-;  (playRPSRec rounds 0))
-(define (playRPS rounds)
-  (for/fold ([score 0])
-            ([round (in-list rounds)])
-    (let* ([op-move (first round)]
-           [my-move (last round)])
-      (+ score (scoreMove op-move my-move)))))
-
 (define input-file "test_input.txt")
 (define data (load-data input-file))
 
