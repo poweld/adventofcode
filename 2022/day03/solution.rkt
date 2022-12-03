@@ -28,27 +28,26 @@
 
 (define rucksacks (load-data input-path))
 
-;(load-data input-path)
+; Part 1
 (for/fold ([acc 0])
           ([rucksack (in-list rucksacks)])
   (let-values ([(comp1 comp2) (split-rucksack rucksack)])
     (let* ([comp1-set (list->set comp1)]
            [comp2-set (list->set comp2)]
            [comp-intersect (first (set->list (set-intersect comp1-set comp2-set)))])
-      (begin
-        (printf "Rucksack: ~s\n" rucksacks)
-        (printf "Compartment 1: ~a\n" comp1)
-        (printf "Compartment 1 Set: ~a\n" comp1-set)
-        (printf "Compartment 2: ~a\n" comp2)
-        (printf "Compartment 2 Set: ~a\n" comp2-set)
-        (printf "Misplaced item type: ~a, priority: ~a\n" comp-intersect (priority comp-intersect))
-        (+ acc (priority comp-intersect))))))
+      (+ acc (priority comp-intersect)))))
 
+; Part 2
+(define (chunk lst size)  ; Chunk a list into groups of size - unsafe if not evenly divisible
+  (if (empty? lst)
+    '()
+    (cons (take lst size) (chunk (drop lst size) size))))
 
-;(split-rucksack '(1 2 3 4 5 6))
-;(split-at '(1 2 3 4 5 6) (/ (length )
-
-;(priority #\a)
-;(priority #\z)
-;(priority #\A)
-;(priority #\Z)
+(define group-size 3)
+(for/fold ([acc 0])
+          ([sack-thruple (in-list (chunk rucksacks group-size))])
+  (let* ([sack-set-thruple (map list->set sack-thruple)]  ; Convert the sack list of chars to char sets
+         [intersection (apply set-intersect sack-set-thruple)]  ; Intersect the three sacks
+         [item (first (set->list intersection))]  ; Take the only item
+         [item-priority (priority item)])
+    (+ acc item-priority)))
