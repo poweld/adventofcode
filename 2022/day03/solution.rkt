@@ -1,8 +1,5 @@
 #lang racket
 
-;(char->integer #\A)
-;(define priority-ht (make-hash (list
-
 (define (priority item-type)
   ; Priority for the given item-type char
   ; a-z -> 1-26
