@@ -29,13 +29,9 @@
 
 ; Part 2
 (define (partially-overlaps a b)
-  (or
-    (and
-      (>= (section-range-start b) (section-range-start a))
-      (<= (section-range-start b) (section-range-end a)))
-    (and
-      (>= (section-range-end b) (section-range-start a))
-      (<= (section-range-end b) (section-range-end a)))))
+  (and
+    (>= (section-range-end b) (section-range-start a))
+    (<= (section-range-start b) (section-range-end a))))
 
 (for/fold ([acc 0])
           ([srange-pair (in-list (load-data input-path))])
