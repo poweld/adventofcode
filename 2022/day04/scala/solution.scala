@@ -2,7 +2,6 @@ import scala.io.Source
 import scala.annotation.*
 
 object Advent {
-  implicit def splitToList(s: String, sep: String): List[String] = s.split(sep).toList
   def parse(file: String) = {
     val lines: List[String] = Source.fromFile(file).getLines().toList
     lines.map(_.split(",").toList
