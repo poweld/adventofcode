@@ -48,13 +48,15 @@ def main() = {
   val inputFile = "input.txt"
   val windowSize = 4
   {
+    // Part 1
     val parsed = parse(inputFile)
-    val part1 = (findUniqueSequenceIndex(parsed, 4))
-    println(part1)
+    val result = (findUniqueSequenceIndex(parsed, 4))
+    println(result)
   }
   {
+    // Part 2
     val parsed = parse(inputFile)
-    val part1 = (findUniqueSequenceIndex(parsed, 14))
-    println(part1)
+    val result = (findUniqueSequenceIndex(parsed, 14))
+    println(result)
   }
 }
