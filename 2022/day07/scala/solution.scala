@@ -32,6 +32,10 @@ object Advent {
     def add(n: INode) = n match {
       // pretty sure the issue is that when we add a new file or dir
       // the child dirs need to be updated with the new parent object
+      // thoughts from caleb:
+      // 1) go in reverse, starting at the bottom and go up
+      // 2) * zipper - functional programming tree management
+      // 3) don't actually build a directory tree
       case d: Dir => {
         Dir(name, children.updated(d.name, d.withParent(this)))
       }
