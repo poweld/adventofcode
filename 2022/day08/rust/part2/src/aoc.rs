@@ -26,11 +26,11 @@ impl Sightlines {
             left: vec![],
         }
     }
-    fn iter(&self) -> Box<dyn Iterator<Item = &Vec<u8>> + '_> {
-        Box::new(iter::once(&self.up)
-            .chain(iter::once(&self.right))
-            .chain(iter::once(&self.down))
-            .chain(iter::once(&self.left)))
+    fn iter(&self) -> impl Iterator<Item = &Vec<u8>> {
+        iter::once(&self.up)
+             .chain(iter::once(&self.right))
+             .chain(iter::once(&self.down))
+             .chain(iter::once(&self.left))
     }
 }
 impl Forest {
@@ -99,9 +99,9 @@ pub fn solve(input_path: &str) -> Result<String, Box<dyn Error>> {
     let input: String = std::fs::read_to_string(input_path)?;
 
     let forest = Forest::from(input);
-    let dimensions = forest.dimensions();
-    let scenic_scores: Vec<usize> = (0..dimensions.0).flat_map(|x| {
-        (0..dimensions.1).map(|y| {
+    let (x_dimension, y_dimension) = forest.dimensions();
+    let scenic_scores: Vec<usize> = (0..x_dimension).flat_map(|x| {
+        (0..y_dimension).map(|y| {
             let target = Coord {x, y};
             forest.scenic_score(&target)
         }).collect::<Vec<_>>()
