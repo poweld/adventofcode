@@ -1,9 +1,15 @@
 use std::error::Error;
+use std::collections::HashSet;
 
 struct Monkey {
     items: Vec<u32>,
     operation: Box<dyn Fn(u32) -> u32>,
     test: Box<dyn Fn(u32) -> usize>,
+}
+impl Monkey {
+    fn to_string(&self, monkey_number: usize) -> String {
+        format!("Monkey {monkey_number}: {0:?}", self.items)
+    }
 }
 
 struct MonkeyBuilder {
@@ -193,25 +199,69 @@ fn parse(input: String) -> Vec<Monkey> {
     monkeys
 }
 
+#[derive(Debug)]
+struct Movement {
+    from_monkey_index: usize,
+    to_monkey_index: usize,
+    from_item_index: usize,
+    new_value: u32,
+}
+
 pub fn solve(input_path: &str) -> Result<String, Box<dyn Error>> {
     let input: String = std::fs::read_to_string(input_path)?;
 
     let mut monkeys = parse(input);
-    for (index, monkey) in monkeys.iter_mut().enumerate() {
-        println!("Monkey {index}:");
-        for item in monkey.items.iter_mut() {
-            println!("  Monkey inspects an item with a worry level of {item}.");
-            let new_worry_level = (monkey.operation)(item.clone());
-            println!("    Worry level is incrased to {new_worry_level}");
-            *item = new_worry_level;
-            let new_worry_level = item / 3;
-            println!("    Monkey gets bored with the item. Worry level is divided by 3 to {new_worry_level}");
-            *item = new_worry_level;
+    let mut inspection_count: Vec<u32> = [0].repeat(monkeys.len());
+    let num_rounds = 20;
+
+    for round in 1..=num_rounds {
+        println!("======= ROUND {round} =======");
+        for monkey_number in 0..monkeys.len() {
+            let monkey = &monkeys[monkey_number];
+            let mut movements: Vec<Movement> = vec![];
+            println!("Monkey {monkey_number}:");
+            for item_index in 0..monkey.items.len() {
+                inspection_count[monkey_number] += 1;
+                let item = monkey.items[item_index];
+                println!("  Monkey inspects an item with a worry level of {item}.");
+                let new_value = (monkey.operation)(item.clone());
+                println!("    Worry level is increased to {new_value}");
+                let new_value = new_value / 3;
+                println!("    Monkey gets bored with the item. Worry level is divided by 3 to {new_value}");
+                let throw_to = (monkey.test)(new_value.clone());
+                println!("    Current worry level tested");
+                println!("    Item with worry level {new_value} is thrown to monkey {throw_to}");
+                movements.push(Movement {
+                    from_monkey_index: monkey_number,
+                    to_monkey_index: throw_to,
+                    from_item_index: item_index,
+                    new_value: new_value,
+                })
+            }
+            let remove_indices = movements.iter()
+                .map(|movement| movement.from_item_index)
+                .collect::<HashSet<_>>();
+            monkeys[monkey_number].items = monkeys[monkey_number].items.iter()
+                .enumerate()
+                .filter(|(item_index, item)| !remove_indices.contains(item_index))
+                .map(|(_, item)| item.clone())
+                .collect::<Vec<_>>();
+            for movement in movements {
+                monkeys[movement.to_monkey_index].items.push(movement.new_value);
+            }
+        }
+        println!("======= AFTER ROUND {round} =======");
+        for (index, monkey) in monkeys.iter().enumerate() {
+            println!("{}", monkey.to_string(index));
         }
     }
 
-    todo!()
-    // Ok(result)
+    inspection_count.sort();
+    inspection_count.reverse();
+    dbg!(&inspection_count);
+    let result = inspection_count[0..=1].iter().product::<u32>().to_string();
+
+    Ok(result)
 }
 
 
