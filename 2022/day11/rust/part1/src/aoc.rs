@@ -196,7 +196,16 @@ fn parse(input: String) -> Vec<Monkey> {
 pub fn solve(input_path: &str) -> Result<String, Box<dyn Error>> {
     let input: String = std::fs::read_to_string(input_path)?;
 
-    parse(input);
+    let mut monkeys = parse(input);
+    for (index, monkey) in monkeys.iter_mut().enumerate() {
+        println!("Monkey {index}:");
+        for item in monkey.items.iter_mut() {
+            println!("  Monkey inspects an item with a worry level of {item}.");
+            let new_worry_level = (monkey.operation)(item.clone());
+            println!("    Worry level is incrased to {new_worry_level}");
+            *item = new_worry_level;
+        }
+    }
 
     todo!()
     // Ok(result)
