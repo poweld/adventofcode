@@ -204,6 +204,9 @@ pub fn solve(input_path: &str) -> Result<String, Box<dyn Error>> {
             let new_worry_level = (monkey.operation)(item.clone());
             println!("    Worry level is incrased to {new_worry_level}");
             *item = new_worry_level;
+            let new_worry_level = item / 3;
+            println!("    Monkey gets bored with the item. Worry level is divided by 3 to {new_worry_level}");
+            *item = new_worry_level;
         }
     }
 
