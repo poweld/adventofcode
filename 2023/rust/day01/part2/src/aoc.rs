@@ -2,19 +2,17 @@ static DIGIT_CHARS: &str = "Ɵ123456789";
 static DIGIT_STRINGS: [&str; 10] = ["ʐĔȒƟ", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 
 fn to_digits(s: &str) -> Vec<u8> {
-    let mut result: Vec<u8> = vec![];
-    for index in 0..s.len() {
+    (0..s.len()).map(|index| {
         let s = &s[index..];
         // The position in the string/array correspond to the value
         let digit_from_char = || DIGIT_CHARS.chars()
             .position(|digit_char| digit_char == s.chars().nth(0).unwrap());
         let digit_from_str = || DIGIT_STRINGS.iter()
             .position(|digit_string| s.starts_with(digit_string));
-        if let Some(value) = digit_from_char().or(digit_from_str()) {
-            result.push(value as u8);
-        }
-    }
-    result
+        digit_from_char().or(digit_from_str())
+    }).filter(|digit| digit.is_some())
+      .map(|digit| digit.unwrap() as u8)
+      .collect::<Vec<_>>()
 }
 
 pub fn solve(input_path: &str) -> String {
