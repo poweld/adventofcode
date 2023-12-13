@@ -33,17 +33,18 @@ impl Pattern {
         }
         self.0[row_index_a] == self.0[row_index_b]
     }
-    fn row_reflection_indices(&self) -> Option<(usize, usize)> {
+    fn row_reflection_indices(&self) -> Vec<(usize, usize)> {
         let row_indices = (0..self.rows()).collect::<Vec<_>>();
         let row_index_windows = row_indices[..].windows(2);
+        let mut result = vec![];
         for row_index_window in row_index_windows {
             if let [row_index_a, row_index_b] = row_index_window {
                 if self.is_row_reflection(row_index_a, row_index_b) {
-                    return Some((*row_index_a, *row_index_b));
+                    result.push((*row_index_a, *row_index_b));
                 }
             }
         }
-        return None
+        result
     }
 }
 
@@ -71,19 +72,16 @@ pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
     let ParseResult { patterns } = parse(&input);
     patterns.iter()
-        .map(|pattern| {
-            if let Some((index_a, index_b)) = pattern.row_reflection_indices() {
-                index_b
-            } else if let Some((index_a, index_b)) = pattern.rotated_and_reflected().row_reflection_indices() {
-            } else {
-                panic!("could not find reflection")
-            }
+        .flat_map(|pattern| {
+            pattern.row_reflection_indices().iter()
+                .map(|(_, index_b)| index_b * 100)
+                .chain(pattern.rotated_and_reflected().row_reflection_indices().iter()
+                    .map(|(_, index_b)| *index_b)
+                )
+                .collect::<Vec<_>>()
         })
-    dbg!(&patterns);
-    dbg!(patterns[0].rotated_and_reflected());
-    dbg!(patterns[0].row_reflection_indices());
-    dbg!(patterns[0].rotated_and_reflected().row_reflection_indices());
-    todo!()
+        .sum::<usize>()
+        .to_string()
 }
 
 #[cfg(test)]
