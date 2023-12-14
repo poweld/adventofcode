@@ -17,12 +17,10 @@ fn one_difference_location(str_a: &str, str_b: &str) -> Option<usize> {
             if location.is_some() {
                 return None;
             }
-            location = Some(bitshift);
+            location = Some(str_a.len() - 1 - (bitshift as usize));
         }
     }
     location
-    // TODO getting kinda sleepy. I think this needs to be refactored, but
-    // we need to know where exactly the smudge was when it's found
 }
 
 #[derive(Debug)]
@@ -47,25 +45,39 @@ impl Pattern {
         }
         Pattern(col_strs)
     }
-    fn is_row_reflection(&self, row_index_a: &usize, row_index_b: &usize, with_smudge: bool) -> bool {
-        let mut row_index_a = row_index_a.clone();
-        let mut row_index_b = row_index_b.clone();
-        let rows = self.rows();
-        let mut used_smudge = false;
-        while row_index_a > 0 && row_index_b < rows - 1 {
-            if with_smudge {
-                if !used_smudge && exactly_one_difference(&self.0[row_index_a], &self.0[row_index_b]) {
-                    used_smudge = true;
-                } else {
-                    return false;
+    fn rotate_and_reflect(&mut self) {
+        self.0 = self.rotated_and_reflected().0;
+    }
+    fn is_row_reflection(&self, row_index_a: &usize, row_index_b: &usize) -> bool {
+        let iter_a = self.0[..=*row_index_a].iter().rev();
+        let iter_b = self.0[*row_index_b..].iter();
+        let mut zip = iter_a.zip(iter_b);
+        zip.all(|(a, b)| a == b)
+    }
+    fn fix_if_smudged_row_reflection(&mut self, row_index_a: &usize, row_index_b: &usize) -> bool {
+        // Return whether smudge was found && fixed
+        let iter_a = (0..=*row_index_a).rev().map(|index_a| (index_a, &self.0[index_a]));
+        let iter_b = (0..=*row_index_b).rev().map(|index_b| (index_b, &self.0[index_b]));
+        let mut zip = iter_a.zip(iter_b);
+        let mut smudge_at: Option<(usize, usize)> = None;
+        let all_eq = zip.all(|((_row_index_a, a), (row_index_b, b))| {
+            if smudge_at.is_none() {
+                if let Some(col_index_b) = one_difference_location(&a, &b) {
+                    smudge_at = Some((row_index_b, col_index_b));
+                    return true;
                 }
-            } else if self.0[row_index_a] != self.0[row_index_b] {
                 return false;
             }
-            row_index_a -= 1;
-            row_index_b += 1;
+            a == b
+        });
+        if all_eq {
+            if let Some((row_index_b, col_index_b)) = smudge_at {
+                self.0[row_index_b].replace_range(col_index_b..col_index_b, "#");  // Doesn't matter which we replace with
+                return true;
+            }
+            return false;
         }
-        self.0[row_index_a] == self.0[row_index_b]
+        false
     }
     fn row_reflection_indices(&self) -> Vec<(usize, usize)> {
         let row_indices = (0..self.rows()).collect::<Vec<_>>();
@@ -73,16 +85,37 @@ impl Pattern {
         let mut result = vec![];
         for row_index_window in row_index_windows {
             if let [row_index_a, row_index_b] = row_index_window {
-                if self.is_row_reflection(row_index_a, row_index_b, false) {
+                if self.is_row_reflection(row_index_a, row_index_b) {
                     result.push((*row_index_a, *row_index_b));
                 }
             }
         }
         result
     }
-    fn find_smudge(&self) {
-    }
     fn fix_smudge(&mut self) {
+        let row_indices = (0..self.rows()).collect::<Vec<_>>();
+        let row_index_windows = row_indices[..].windows(2);
+        for row_index_window in row_index_windows {
+            if let [row_index_a, row_index_b] = row_index_window {
+                if self.fix_if_smudged_row_reflection(row_index_a, row_index_b) {
+                    return;
+                }
+            }
+        }
+
+        self.rotate_and_reflect();
+        let row_indices = (0..self.rows()).collect::<Vec<_>>();
+        let row_index_windows = row_indices[..].windows(2);
+        for row_index_window in row_index_windows {
+            if let [row_index_a, row_index_b] = row_index_window {
+                if self.fix_if_smudged_row_reflection(row_index_a, row_index_b) {
+                    self.rotate_and_reflect();
+                    return;
+                }
+            }
+        }
+
+        panic!("did not find smudge to fix");
     }
 }
 
@@ -108,7 +141,10 @@ fn parse(input: &str) -> ParseResult {
 
 pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
-    let ParseResult { patterns } = parse(&input);
+    let ParseResult { mut patterns } = parse(&input);
+    for mut pattern in patterns.iter_mut() {
+        pattern.fix_smudge();
+    }
     patterns.iter()
         .flat_map(|pattern| {
             pattern.row_reflection_indices().iter()
@@ -130,7 +166,7 @@ mod tests {
     fn solve_test() {
         let result = solve("data/test_input.txt");
         println!("result: {result}");
-        assert_eq!(result, 405.to_string());
+        assert_eq!(result, 400.to_string());
     }
 
     #[test]
@@ -143,6 +179,8 @@ mod tests {
     fn one_difference_location_test() {
         let result = one_difference_location("#.#.#", "#.#..");
         assert_eq!(result, Some(4));
+        let result = one_difference_location("#...#", "#.#.#");
+        assert_eq!(result, Some(2));
         let result = one_difference_location("#.#.#", "#....");
         assert_eq!(result, None);
         let result = one_difference_location("#.#.#", "#.#.#");
