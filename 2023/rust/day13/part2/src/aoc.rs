@@ -8,19 +8,21 @@ fn str_to_bitmask(s: &str) -> u32 {
     }
     result
 }
-fn exactly_one_difference(str_a: &str, str_b: &str) -> bool {
+fn one_difference_location(str_a: &str, str_b: &str) -> Option<usize> {
     let bitmask_a = str_to_bitmask(str_a);
     let bitmask_b = str_to_bitmask(str_b);
-    let mut found_one = false;
+    let mut location: Option<usize> = None;
     for bitshift in 0..u32::BITS {
         if bitmask_a >> bitshift & 0b1 != bitmask_b >> bitshift & 0b1 {
-            if found_one {
-                return false;
+            if location.is_some() {
+                return None;
             }
-            found_one = true;
+            location = Some(bitshift);
         }
     }
-    return found_one;
+    location
+    // TODO getting kinda sleepy. I think this needs to be refactored, but
+    // we need to know where exactly the smudge was when it's found
 }
 
 #[derive(Debug)]
@@ -49,8 +51,15 @@ impl Pattern {
         let mut row_index_a = row_index_a.clone();
         let mut row_index_b = row_index_b.clone();
         let rows = self.rows();
+        let mut used_smudge = false;
         while row_index_a > 0 && row_index_b < rows - 1 {
-            if self.0[row_index_a] != self.0[row_index_b] {
+            if with_smudge {
+                if !used_smudge && exactly_one_difference(&self.0[row_index_a], &self.0[row_index_b]) {
+                    used_smudge = true;
+                } else {
+                    return false;
+                }
+            } else if self.0[row_index_a] != self.0[row_index_b] {
                 return false;
             }
             row_index_a -= 1;
@@ -70,6 +79,8 @@ impl Pattern {
             }
         }
         result
+    }
+    fn find_smudge(&self) {
     }
     fn fix_smudge(&mut self) {
     }
@@ -129,12 +140,12 @@ mod tests {
     }
 
     #[test]
-    fn exactly_one_difference_test() {
-        let result = exactly_one_difference("#.#.#", "#.#..");
-        assert_eq!(result, true);
-        let result = exactly_one_difference("#.#.#", "#....");
-        assert_eq!(result, false);
-        let result = exactly_one_difference("#.#.#", "#.#.#");
-        assert_eq!(result, false);
+    fn one_difference_location_test() {
+        let result = one_difference_location("#.#.#", "#.#..");
+        assert_eq!(result, Some(4));
+        let result = one_difference_location("#.#.#", "#....");
+        assert_eq!(result, None);
+        let result = one_difference_location("#.#.#", "#.#.#");
+        assert_eq!(result, None);
     }
 }
