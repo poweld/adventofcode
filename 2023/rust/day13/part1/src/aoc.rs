@@ -21,17 +21,10 @@ impl Pattern {
         Pattern(col_strs)
     }
     fn is_row_reflection(&self, row_index_a: &usize, row_index_b: &usize) -> bool {
-        let mut row_index_a = row_index_a.clone();
-        let mut row_index_b = row_index_b.clone();
-        let rows = self.rows();
-        while row_index_a > 0 && row_index_b < rows - 1 {
-            if self.0[row_index_a] != self.0[row_index_b] {
-                return false;
-            }
-            row_index_a -= 1;
-            row_index_b += 1;
-        }
-        self.0[row_index_a] == self.0[row_index_b]
+        let iter_a = self.0[..=*row_index_a].iter().rev();
+        let iter_b = self.0[*row_index_b..].iter();
+        let mut zip = iter_a.zip(iter_b);
+        zip.all(|(a, b)| a == b)
     }
     fn row_reflection_indices(&self) -> Vec<(usize, usize)> {
         let row_indices = (0..self.rows()).collect::<Vec<_>>();
