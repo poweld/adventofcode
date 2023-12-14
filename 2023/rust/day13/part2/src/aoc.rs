@@ -9,6 +9,7 @@ fn str_to_bitmask(s: &str) -> u32 {
     result
 }
 fn one_difference_location(str_a: &str, str_b: &str) -> Option<usize> {
+    assert!(str_a.len() == str_b.len());
     let bitmask_a = str_to_bitmask(str_a);
     let bitmask_b = str_to_bitmask(str_b);
     let mut location: Option<usize> = None;
@@ -61,9 +62,12 @@ impl Pattern {
         let mut zip = iter_a.zip(iter_b);
         let mut smudge_at: Option<(usize, usize)> = None;
         let all_eq = zip.all(|((_row_index_a, a), (row_index_b, b))| {
+            dbg!(&a, &b);
             if smudge_at.is_none() {
+                dbg!(one_difference_location(&a, &b));
                 if let Some(col_index_b) = one_difference_location(&a, &b) {
                     smudge_at = Some((row_index_b, col_index_b));
+                    dbg!(&smudge_at);
                     return true;
                 }
                 return false;
@@ -181,6 +185,8 @@ mod tests {
         assert_eq!(result, Some(4));
         let result = one_difference_location("#...#", "#.#.#");
         assert_eq!(result, Some(2));
+        let result = one_difference_location("#.##..##.", "..##..##.");
+        assert_eq!(result, Some(0));
         let result = one_difference_location("#.#.#", "#....");
         assert_eq!(result, None);
         let result = one_difference_location("#.#.#", "#.#.#");
