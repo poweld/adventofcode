@@ -116,18 +116,15 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     let mut came_from: HashMap<Coord, Coord> = HashMap::new();
     let mut gscore: HashMap<Coord, u64> = HashMap::from([(*start, 0u64)]);
     let mut fscore: HashMap<Coord, u64> = HashMap::from([(*start, h(start))]);
+    let mut count = 0;
     while !open_set.is_empty() {
+        count += 1;
+        dbg!(&open_set);
         let current = {
             let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&u64::MAX).clone();
-            let mut coord_and_fscores = open_set.iter()
-                .map(|coord| (coord, get_fscore(coord)))
-                .collect::<Vec<_>>();
-            coord_and_fscores.sort_by(|(_, a), (_, b)| a.cmp(b));
-            coord_and_fscores.into_iter()
-                .map(|(coord, _)| coord)
-                .last()
-                .unwrap()
-                .clone()
+            let mut coords: Vec<&Coord> = open_set.iter().collect();
+            coords.sort_by(|a, b| get_fscore(a).cmp(&get_fscore(b)));
+            coords[0].clone()
         };
         if current == *goal {
             return reconstruct_path(came_from, current);
@@ -145,6 +142,9 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
                 }
             }
         }
+        if count > 10 {
+            break; // TODO debugging
+        }
     }
     panic!("open open set, but goal was never reached");
 }
@@ -152,6 +152,8 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
 pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
     let ParseResult { plane } = parse(&input);
+    println!("{plane}\n");
+    dbg!(astar(&Coord { row: 0, col: 0 }, &Coord { row: 0, col: 3 }, &plane));
     todo!()
     // let init_coords = std::iter::once(CoordDir(Coord { row: 0, col: 0 }, Direction::East));
     // init_coords.map(|init_coorddir| {
