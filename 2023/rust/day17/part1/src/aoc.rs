@@ -131,7 +131,8 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
         open_set.remove(&current);
         for neighbor in plane.neighbors(&current) {
             let get_gscore = |coord: &Coord| gscore.get(coord).unwrap_or(&u64::MAX).clone();
-            let tentative_gscore = get_gscore(&current);
+            let d = |current, neighbor| plane.get(&neighbor).unwrap();
+            let tentative_gscore = get_gscore(&current) + d(current, neighbor);
             if tentative_gscore < get_gscore(&neighbor) {
                 came_from.insert(neighbor, current);
                 gscore.insert(neighbor, tentative_gscore);
@@ -151,51 +152,8 @@ pub fn solve(input_path: &str) -> String {
     println!("{plane}\n");
     let start = Coord { row: 0, col: 0 };
     let goal = Coord { row: (plane.rows() as i64) - 1, col: (plane.cols() as i64) - 1 };
-    dbg!(astar(&start, &goal, &plane));
-    todo!()
-    // let init_coords = std::iter::once(CoordDir(Coord { row: 0, col: 0 }, Direction::East));
-    // init_coords.map(|init_coorddir| {
-    //     let mut plane = plane.clone();
-    //     let init_coord = init_coorddir.0;
-    //     let init_direction = init_coorddir.1;
-    //     let mut runners = vec![Runner { coord: init_coord.clone(), direction: init_direction }];
-    //     let mut seen_from_direction: HashSet<CoordDir> = HashSet::new();
-    //     let mut visited: HashSet<Coord> = HashSet::new();
-
-    //     while runners.len() > 0 {
-    //         // dbg!(&runners);
-    //         let runner = runners.pop().unwrap();
-    //         let coorddir = CoordDir(runner.coord, runner.direction);
-    //         if seen_from_direction.contains(&coorddir) {
-    //             continue;
-    //         }
-    //         seen_from_direction.insert(coorddir);
-    //         plane.visit_by(&runner);
-    //         // println!("\n{plane}\n");
-    //         let at_location = plane.get(&runner.coord);
-    //         if let Some(at_location) = at_location {
-    //             visited.insert(runner.coord);
-    //             let new_directions = runner.clone().direction.reflect(*at_location);
-    //             // dbg!(&new_directions);
-    //             for new_direction in new_directions {
-    //                 let new_coord = match new_direction {
-    //                     Direction::North => Coord { row: runner.coord.row - 1, col: runner.coord.col },
-    //                     Direction::East => Coord { row: runner.coord.row, col: runner.coord.col + 1 },
-    //                     Direction::South => Coord { row: runner.coord.row + 1, col: runner.coord.col },
-    //                     Direction::West => Coord { row: runner.coord.row, col: runner.coord.col - 1 },
-    //                 };
-    //                 let mut new_runner = runner.clone();
-    //                 new_runner.coord = new_coord;
-    //                 new_runner.direction = new_direction;
-    //                 runners.push(new_runner);
-    //             }
-    //         }
-    //     }
-
-    //     visited.len()
-    // })
-    // .max().unwrap()
-    // .to_string()
+    let result = dbg!(astar(&start, &goal, &plane)));
+    result.to_string(); 
 }
 
 #[cfg(test)]
@@ -206,6 +164,6 @@ mod tests {
     fn solve_test() {
         let result = solve("data/test_input.txt");
         println!("result: {result}");
-        assert_eq!(result, 46.to_string());
+        assert_eq!(result, 102.to_string());
     }
 }
