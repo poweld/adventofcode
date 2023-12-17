@@ -102,10 +102,13 @@ struct Runner {
     direction: Direction,
 }
 
-fn reconstruct_path(came_from: HashMap<Coord, Coord>, current: Coord) -> Vec<Coord> {
-    let mut total_path = VecDeque::from([current]);
+fn reconstruct_path(came_from: &HashMap<Coord, Coord>, current: &Coord) -> Vec<Coord> {
+    dbg!(&came_from, &current);
+    let mut total_path = VecDeque::from([*current]);
+    let mut current = current;
     while came_from.contains_key(&current) {
-        let current = came_from.get(&current).unwrap();
+        current = came_from.get(&current).unwrap();
+        dbg!(&current);
         total_path.push_front(*current);
     }
     Vec::from(total_path)
@@ -120,17 +123,21 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     while !open_set.is_empty() {
         count += 1;
         dbg!(&open_set);
+        println!("here a");
         let current = {
             let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&u64::MAX).clone();
             let mut coords: Vec<&Coord> = open_set.iter().collect();
             coords.sort_by(|a, b| get_fscore(a).cmp(&get_fscore(b)));
             coords[0].clone()
         };
+        println!("here b");
         if current == *goal {
-            return reconstruct_path(came_from, current);
+            println!("reconstruct_path!");
+            return reconstruct_path(&came_from, &current);
         }
         open_set.remove(&current);
         for neighbor in plane.neighbors(&current) {
+            println!("here1");
             let get_gscore = |coord: &Coord| gscore.get(coord).unwrap_or(&u64::MAX).clone();
             let tentative_gscore = get_gscore(&current);
             if tentative_gscore < get_gscore(&neighbor) {
@@ -141,6 +148,7 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
                     open_set.insert(neighbor);
                 }
             }
+            println!("here2");
         }
         if count > 10 {
             break; // TODO debugging
@@ -153,7 +161,7 @@ pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
     let ParseResult { plane } = parse(&input);
     println!("{plane}\n");
-    dbg!(astar(&Coord { row: 0, col: 0 }, &Coord { row: 0, col: 3 }, &plane));
+    dbg!(astar(&Coord { row: 0, col: 0 }, &Coord { row: 0, col: 3 }, &plane)); // shorter test
     todo!()
     // let init_coords = std::iter::once(CoordDir(Coord { row: 0, col: 0 }, Direction::East));
     // init_coords.map(|init_coorddir| {
