@@ -190,7 +190,10 @@ pub fn solve(input_path: &str) -> String {
         plane.set(&coord, 0);
     }
     println!("{plane}\n");
-    result.len().to_string()
+    result.iter()
+        .map(|coord| plane.get(&coord).unwrap())
+        .sum::<u64>()
+        .to_string()
 }
 
 #[cfg(test)]
