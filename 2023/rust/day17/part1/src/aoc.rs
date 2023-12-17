@@ -112,11 +112,11 @@ fn reconstruct_path(came_from: &HashMap<Coord, Coord>, current: &Coord) -> Vec<C
     Vec::from(total_path)
 }
 fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
-    let h = |from: &Coord| from.manhattan_distance(goal);
+    let heuristic = |from: &Coord| from.manhattan_distance(goal);
     let mut open_set: HashSet<Coord> = HashSet::from([*start]);
     let mut came_from: HashMap<Coord, Coord> = HashMap::new();
     let mut gscore: HashMap<Coord, u64> = HashMap::from([(*start, 0u64)]);
-    let mut fscore: HashMap<Coord, u64> = HashMap::from([(*start, h(start))]);
+    let mut fscore: HashMap<Coord, u64> = HashMap::from([(*start, heuristic(start))]);
     let mut count = 0;
     while !open_set.is_empty() {
         let current = {
@@ -131,12 +131,12 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
         open_set.remove(&current);
         for neighbor in plane.neighbors(&current) {
             let get_gscore = |coord: &Coord| gscore.get(coord).unwrap_or(&u64::MAX).clone();
-            let d = |current, neighbor| plane.get(&neighbor).unwrap();
-            let tentative_gscore = get_gscore(&current) + d(current, neighbor);
+            let distance = |current, neighbor| plane.get(&neighbor).unwrap();
+            let tentative_gscore = get_gscore(&current) + distance(current, neighbor);
             if tentative_gscore < get_gscore(&neighbor) {
                 came_from.insert(neighbor, current);
                 gscore.insert(neighbor, tentative_gscore);
-                fscore.insert(neighbor, tentative_gscore + h(&neighbor));
+                fscore.insert(neighbor, tentative_gscore + heuristic(&neighbor));
                 if !open_set.contains(&neighbor) {
                     open_set.insert(neighbor);
                 }
@@ -153,7 +153,11 @@ pub fn solve(input_path: &str) -> String {
     let start = Coord { row: 0, col: 0 };
     let goal = Coord { row: (plane.rows() as i64) - 1, col: (plane.cols() as i64) - 1 };
     let result = dbg!(astar(&start, &goal, &plane));
-    result.len().to_string()
+    result.iter()
+        .skip(1)
+        .map(|coord| plane.get(&coord).unwrap())
+        .sum::<u64>()
+        .to_string()
 }
 
 #[cfg(test)]
