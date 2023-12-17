@@ -152,8 +152,8 @@ pub fn solve(input_path: &str) -> String {
     println!("{plane}\n");
     let start = Coord { row: 0, col: 0 };
     let goal = Coord { row: (plane.rows() as i64) - 1, col: (plane.cols() as i64) - 1 };
-    let result = dbg!(astar(&start, &goal, &plane)));
-    result.to_string(); 
+    let result = dbg!(astar(&start, &goal, &plane));
+    result.len().to_string()
 }
 
 #[cfg(test)]
