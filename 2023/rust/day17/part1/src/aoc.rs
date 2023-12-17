@@ -116,17 +116,19 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     let mut came_from: HashMap<Coord, Coord> = HashMap::new();
     let mut gscore: HashMap<Coord, u64> = HashMap::from([(*start, 0u64)]);
     let mut fscore: HashMap<Coord, u64> = HashMap::from([(*start, h(start))]);
-    let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&u64::MAX).clone();
     while !open_set.is_empty() {
-        let mut coord_and_fscores = open_set.iter()
-            .map(|coord| (coord, get_fscore(coord)))
-            .collect::<Vec<_>>();
-        coord_and_fscores.sort_by(|(_, a), (_, b)| a.cmp(b));
-        let current = coord_and_fscores.into_iter()
-            .map(|(coord, _)| coord)
-            .last()
-            .unwrap()
-            .clone();
+        let current = {
+            let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&u64::MAX).clone();
+            let mut coord_and_fscores = open_set.iter()
+                .map(|coord| (coord, get_fscore(coord)))
+                .collect::<Vec<_>>();
+            coord_and_fscores.sort_by(|(_, a), (_, b)| a.cmp(b));
+            coord_and_fscores.into_iter()
+                .map(|(coord, _)| coord)
+                .last()
+                .unwrap()
+                .clone()
+        };
         if current == *goal {
             return reconstruct_path(came_from, current);
         }
