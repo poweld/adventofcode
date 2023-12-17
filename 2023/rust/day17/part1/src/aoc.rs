@@ -147,17 +147,16 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
             let d = |current, neighbor| {
                 let came_from_entry = came_from.get(current);
                 if let Some(came_from_entry) = came_from_entry {
-                    dbg!(&came_from_entry);
-                    if came_from_entry.len() == 2 {
-                        println!("here!!!");
-                    }
                     if came_from_entry.len() == 2 && came_from_entry.iter().all(|CoordDir(_, came_from_dir)| came_from_dir == &direction) {
+                        println!("can't go in the same dir 3 times");
+                        dbg!(&came_from_entry, &direction);
                         return &bignum;
                     }
                 }
-                return plane.get(&neighbor).unwrap();
+                return dbg!(plane.get(&neighbor).unwrap());
             };
             let tentative_gscore = get_gscore(&current) + d(&current, neighbor);
+            dbg!(&tentative_gscore);
             if tentative_gscore < get_gscore(&neighbor) {
                 let current_coorddir = CoordDir(current, direction);
                 let mut neighbor_came_from = came_from.get(&current).unwrap_or(&VecDeque::new()).clone();
@@ -181,15 +180,17 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
 pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
     let ParseResult { mut plane } = parse(&input);
+    plane.set(&Coord { row: 0, col: 0 }, 0);
     println!("{plane}\n");
     let start = Coord { row: 0, col: 0 };
     // let goal = Coord { row: 0, col: 3 };
     let goal = Coord { row: (plane.rows() as i64) - 1, col: (plane.cols() as i64) - 1 };
     let result = dbg!(astar(&start, &goal, &plane));
+    let mut newplane = plane.clone();
     for coord in result.iter() {
-        plane.set(&coord, 0);
+        newplane.set(&coord, 0);
     }
-    println!("{plane}\n");
+    println!("{newplane}\n");
     result.iter()
         .map(|coord| plane.get(&coord).unwrap())
         .sum::<u64>()
