@@ -38,14 +38,14 @@ impl Plane {
         (coord.row as usize) < self.rows() &&
         (coord.col as usize) < self.cols()
     }
-    fn neighbors(&self, coord: &Coord) -> Vec<Coord> {
+    fn neighbors(&self, coord: &Coord) -> Vec<CoordDir> {
         let neighbors = vec![
-            Coord { row: coord.row - 1, col: coord.col },
-            Coord { row: coord.row + 1, col: coord.col },
-            Coord { row: coord.row, col: coord.col - 1 },
-            Coord { row: coord.row, col: coord.col + 1 },
+            CoordDir(Coord { row: coord.row - 1, col: coord.col }, Direction::North),
+            CoordDir(Coord { row: coord.row + 1, col: coord.col }, Direction::South),
+            CoordDir(Coord { row: coord.row, col: coord.col - 1 }, Direction::West),
+            CoordDir(Coord { row: coord.row, col: coord.col + 1 }, Direction::East),
         ];
-        neighbors.into_iter().filter(|c| self.is_in_bounds(c)).collect()
+        neighbors.into_iter().filter(|cd| self.is_in_bounds(&cd.0)).collect()
     }
     fn get(&self, coord: &Coord) -> Option<&u64> {
         let row = coord.row as usize;
@@ -129,7 +129,7 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
             return reconstruct_path(&came_from, &current);
         }
         open_set.remove(&current);
-        for neighbor in plane.neighbors(&current) {
+        for CoordDir(neighbor, direction) in plane.neighbors(&current) {
             let get_gscore = |coord: &Coord| gscore.get(coord).unwrap_or(&u64::MAX).clone();
             let d = |current, neighbor| plane.get(&neighbor).unwrap();
             let tentative_gscore = get_gscore(&current) + d(current, neighbor);
