@@ -124,13 +124,12 @@ fn reconstruct_path(came_from: &HashMap<Coord, VecDeque<CoordDir>>, current: &Co
     Vec::from(total_path)
 }
 static bignum: u64 = 999_999_999_999; // TODO find a better way to avoid overflowing on addition
-fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
-    let h = |from: &Coord| from.manhattan_distance(goal);
+fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> (Vec<Coord>) {
+    let heuristic = |from: &Coord| from.manhattan_distance(goal);
     let mut open_set: HashSet<Coord> = HashSet::from([*start]);
     let mut came_from: HashMap<Coord, VecDeque<CoordDir>> = HashMap::new();
     let mut gscore: HashMap<Coord, u64> = HashMap::from([(*start, 0u64)]);
-    let mut fscore: HashMap<Coord, u64> = HashMap::from([(*start, h(start))]);
-    let mut count = 0;
+    let mut fscore: HashMap<Coord, u64> = HashMap::from([(*start, heuristic(start))]);
     while !open_set.is_empty() {
         let current = {
             let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&bignum).clone();
@@ -144,7 +143,7 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
         open_set.remove(&current);
         for CoordDir(neighbor, direction) in plane.neighbors(&current) {
             let get_gscore = |coord: &Coord| gscore.get(coord).unwrap_or(&bignum).clone();
-            let d = |current, neighbor| {
+            let distance = |current, neighbor| {
                 let came_from_entry = came_from.get(current);
                 if let Some(came_from_entry) = came_from_entry {
                     if came_from_entry.len() == 2 && came_from_entry.iter().all(|CoordDir(_, came_from_dir)| came_from_dir == &direction) {
@@ -155,9 +154,10 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
                 }
                 return dbg!(plane.get(&neighbor).unwrap());
             };
-            let tentative_gscore = get_gscore(&current) + d(&current, neighbor);
+            let tentative_gscore = get_gscore(&current) + distance(&current, neighbor);
             dbg!(&tentative_gscore);
             if tentative_gscore < get_gscore(&neighbor) {
+                println!("chosen gscore: {tentative_gscore}");
                 let current_coorddir = CoordDir(current, direction);
                 let mut neighbor_came_from = came_from.get(&current).unwrap_or(&VecDeque::new()).clone();
                 neighbor_came_from.push_back(current_coorddir);
@@ -167,7 +167,7 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
                 dbg!(&neighbor_came_from);
                 came_from.insert(neighbor, neighbor_came_from);
                 gscore.insert(neighbor, tentative_gscore);
-                fscore.insert(neighbor, tentative_gscore + h(&neighbor));
+                fscore.insert(neighbor, tentative_gscore + heuristic(&neighbor));
                 if !open_set.contains(&neighbor) {
                     open_set.insert(neighbor);
                 }
@@ -179,8 +179,8 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
 
 pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
-    let ParseResult { mut plane } = parse(&input);
-    plane.set(&Coord { row: 0, col: 0 }, 0);
+    let ParseResult { plane } = parse(&input);
+    // plane.set(&Coord { row: 0, col: 0 }, 0);
     println!("{plane}\n");
     let start = Coord { row: 0, col: 0 };
     // let goal = Coord { row: 0, col: 3 };
@@ -192,6 +192,7 @@ pub fn solve(input_path: &str) -> String {
     }
     println!("{newplane}\n");
     result.iter()
+        .skip(1)
         .map(|coord| plane.get(&coord).unwrap())
         .sum::<u64>()
         .to_string()
