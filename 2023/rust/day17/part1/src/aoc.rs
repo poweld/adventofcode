@@ -38,14 +38,14 @@ impl Plane {
         (coord.row as usize) < self.rows() &&
         (coord.col as usize) < self.cols()
     }
-    fn neighbors(&self, coord: &Coord) -> Vec<Coord> {
+    fn neighbors(&self, coord: &Coord) -> Vec<CoordDir> {
         let neighbors = vec![
-            Coord { row: coord.row - 1, col: coord.col },
-            Coord { row: coord.row + 1, col: coord.col },
-            Coord { row: coord.row, col: coord.col - 1 },
-            Coord { row: coord.row, col: coord.col + 1 },
+            CoordDir(Coord { row: coord.row - 1, col: coord.col }, Direction::North),
+            CoordDir(Coord { row: coord.row + 1, col: coord.col }, Direction::South),
+            CoordDir(Coord { row: coord.row, col: coord.col - 1 }, Direction::West),
+            CoordDir(Coord { row: coord.row, col: coord.col + 1 }, Direction::East),
         ];
-        neighbors.into_iter().filter(|c| self.is_in_bounds(c)).collect()
+        neighbors.into_iter().filter(|cd| self.is_in_bounds(&cd.0)).collect()
     }
     fn get(&self, coord: &Coord) -> Option<&u64> {
         let row = coord.row as usize;
@@ -102,11 +102,11 @@ struct Runner {
     direction: Direction,
 }
 
-fn reconstruct_path(came_from: &HashMap<Coord, Coord>, current: &Coord) -> Vec<Coord> {
+fn reconstruct_path(came_from: &HashMap<Coord, CoordDir>, current: &Coord) -> Vec<Coord> {
     let mut total_path = VecDeque::from([*current]);
     let mut current = current;
     while came_from.contains_key(&current) {
-        current = came_from.get(&current).unwrap();
+        current = &came_from.get(&current).unwrap().0;
         total_path.push_front(*current);
     }
     Vec::from(total_path)
@@ -114,7 +114,7 @@ fn reconstruct_path(came_from: &HashMap<Coord, Coord>, current: &Coord) -> Vec<C
 fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     let heuristic = |from: &Coord| from.manhattan_distance(goal);
     let mut open_set: HashSet<Coord> = HashSet::from([*start]);
-    let mut came_from: HashMap<Coord, Coord> = HashMap::new();
+    let mut came_from: HashMap<Coord, CoordDir> = HashMap::new();
     let mut gscore: HashMap<Coord, u64> = HashMap::from([(*start, 0u64)]);
     let mut fscore: HashMap<Coord, u64> = HashMap::from([(*start, heuristic(start))]);
     let mut count = 0;
@@ -129,12 +129,20 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
             return reconstruct_path(&came_from, &current);
         }
         open_set.remove(&current);
-        for neighbor in plane.neighbors(&current) {
+        for CoordDir(neighbor, dir) in plane.neighbors(&current) {
             let get_gscore = |coord: &Coord| gscore.get(coord).unwrap_or(&u64::MAX).clone();
-            let distance = |current, neighbor| plane.get(&neighbor).unwrap();
+            let distance = |current, neighbor| {
+                let previous = came_from.get(&current);
+                let two_back = previous.and_then(|previous| came_from.get(&previous.0));
+                if [previous, two_back].into_iter().all(|prev| prev.is_some() && prev.unwrap().1 == dir) {
+                    // Attempting three moves in a row in the same direction
+                    return 999999999u64;
+                }
+                return *plane.get(&neighbor).unwrap()
+            };
             let tentative_gscore = get_gscore(&current) + distance(current, neighbor);
             if tentative_gscore < get_gscore(&neighbor) {
-                came_from.insert(neighbor, current);
+                came_from.insert(neighbor, CoordDir(current, dir));
                 gscore.insert(neighbor, tentative_gscore);
                 fscore.insert(neighbor, tentative_gscore + heuristic(&neighbor));
                 if !open_set.contains(&neighbor) {
