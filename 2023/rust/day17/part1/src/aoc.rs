@@ -118,7 +118,7 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     let get_gscore = |coord: &Coord| gscore.get(coord).unwrap_or(&u64::MAX);
     let mut fscore: HashMap<Coord, u64> = HashMap::from([(*start, h(start))]);
     let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&u64::MAX);
-    while open_set.len() > 0 {
+    while !open_set.is_empty() {
         let mut coord_and_fscores = open_set.iter()
             .map(|coord| (coord, get_fscore(coord)))
             .collect::<Vec<_>>();
@@ -126,15 +126,16 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
         let current = coord_and_fscores.into_iter()
             .map(|(coord, _)| coord)
             .last()
-            .unwrap();
-        if current == goal {
-            return reconstruct_path(came_from, *current);
+            .unwrap()
+            .clone();
+        if current == *goal {
+            return reconstruct_path(came_from, current);
         }
-        open_set.remove(current);
+        open_set.remove(&current);
         for neighbor in plane.neighbors(&current) {
             let tentative_gscore = get_gscore(&current);
             if tentative_gscore < get_gscore(&neighbor) {
-                came_from.insert(neighbor, *current);
+                came_from.insert(neighbor, current);
                 gscore.insert(neighbor, *tentative_gscore);
                 fscore.insert(neighbor, tentative_gscore + h(&neighbor));
                 if !open_set.contains(&neighbor) {
