@@ -38,6 +38,15 @@ impl Plane {
         (coord.row as usize) < self.rows() &&
         (coord.col as usize) < self.cols()
     }
+    fn neighbors(&self, coord: &Coord) -> Vec<Coord> {
+        let neighbors = vec![
+            Coord { row: coord.row - 1, col: coord.col },
+            Coord { row: coord.row + 1, col: coord.col },
+            Coord { row: coord.row, col: coord.col - 1 },
+            Coord { row: coord.row, col: coord.col + 1 },
+        ];
+        neighbors.into_iter().filter(|c| self.is_in_bounds(c)).collect()
+    }
     fn get(&self, coord: &Coord) -> Option<&u64> {
         let row = coord.row as usize;
         let col = coord.col as usize;
@@ -73,8 +82,8 @@ struct ParseResult {
 }
 
 fn parse(input: &str) -> ParseResult {
-    let plane_data: Vec<Vec<char>> = input.lines()
-        .map(|line| line.chars().collect::<Vec<_>>())
+    let plane_data: Vec<Vec<u64>> = input.lines()
+        .map(|line| line.chars().map(|c| c.to_digit().unwrap()).collect::<Vec<_>>())
         .collect();
     ParseResult { plane: Plane(plane_data) }
 }
@@ -96,65 +105,94 @@ struct Runner {
 fn reconstruct_path(came_from: HashMap<Coord, Coord>, current: Coord) -> Vec<Coord> {
     let mut total_path = VecDeque::from([current]);
     while came_from.contains(current) {
-        let current = came_from.get(current).last().unwrap();
-        total_path.push_front(current);
+        let current = came_from.get(&current).unwrap();
+        total_path.push_front(*current);
     }
     Vec::from(total_path)
 }
 fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
-    let h = |from: Coord| from.manhattan_distance(goal);
+    let h = |from: &Coord| from.manhattan_distance(goal);
     let mut open_set: HashSet<Coord> = HashSet::from([*start]);
     let mut came_from: HashMap<Coord, Coord> = HashMap::new();
-    let mut gscore: HashMap<Coord, u64> = HashMap::from([(start, 0)]);
-    let fscore: HashMap<Coord, u64> = HashMap::from([(start)]);
+    let mut gscore: HashMap<Coord, u64> = HashMap::from([(*start, 0u64)]);
+    let get_gscore = |coord: &Coord| gscore.get(neighbor).unwrap_or(&u64::MAX);
+    let fscore: HashMap<Coord, u64> = HashMap::from([(*start, h(start))]);
+    let get_fscore = |coord: &Coord| fscore.get(neighbor).unwrap_or(&u64::MAX);
+    while open_set.len() > 0 {
+        let mut coord_and_fscores = current = open_set.iter()
+            .map(|coord| (coord, get_fscore(coord)))
+            .collect::<Vec<_>>();
+        coord_and_fscores.sort_by(|(_, a), (_, b)| a.cmp(b));
+        coord_and_fscores.into_iter()
+            .map(|(coord, _)| coord)
+            .last()
+            .unwrap();
+        if current == goal {
+            return reconstruct_path(came_from, current);
+        }
+        open_set.remove(current);
+        for neighbor in plane.neighbors(&current) {
+            let tentative_gscore = get_gscore(&current);
+            if tentative_gscore < get_gscore(&neighbor) {
+                came_from.insert(neighbor, current);
+                gscore.insert(neighbor, *tentative_gscore);
+                fscore.insert(neighbor, tentative_gscore + h(&neighbor));
+                if !open_set.contains(&neighbor) {
+                    open_set.insert(neighbor);
+                }
+            }
+        }
+    }
+    panic!("open open set, but goal was never reached");
 }
 
 pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
     let ParseResult { plane } = parse(&input);
-    let init_coords = std::iter::once(CoordDir(Coord { row: 0, col: 0 }, Direction::East));
-    init_coords.map(|init_coorddir| {
-        let mut plane = plane.clone();
-        let init_coord = init_coorddir.0;
-        let init_direction = init_coorddir.1;
-        let mut runners = vec![Runner { coord: init_coord.clone(), direction: init_direction }];
-        let mut seen_from_direction: HashSet<CoordDir> = HashSet::new();
-        let mut visited: HashSet<Coord> = HashSet::new();
+    todo!()
+    // let init_coords = std::iter::once(CoordDir(Coord { row: 0, col: 0 }, Direction::East));
+    // init_coords.map(|init_coorddir| {
+    //     let mut plane = plane.clone();
+    //     let init_coord = init_coorddir.0;
+    //     let init_direction = init_coorddir.1;
+    //     let mut runners = vec![Runner { coord: init_coord.clone(), direction: init_direction }];
+    //     let mut seen_from_direction: HashSet<CoordDir> = HashSet::new();
+    //     let mut visited: HashSet<Coord> = HashSet::new();
 
-        while runners.len() > 0 {
-            // dbg!(&runners);
-            let runner = runners.pop().unwrap();
-            let coorddir = CoordDir(runner.coord, runner.direction);
-            if seen_from_direction.contains(&coorddir) {
-                continue;
-            }
-            seen_from_direction.insert(coorddir);
-            plane.visit_by(&runner);
-            // println!("\n{plane}\n");
-            let at_location = plane.get(&runner.coord);
-            if let Some(at_location) = at_location {
-                visited.insert(runner.coord);
-                let new_directions = runner.clone().direction.reflect(*at_location);
-                // dbg!(&new_directions);
-                for new_direction in new_directions {
-                    let new_coord = match new_direction {
-                        Direction::North => Coord { row: runner.coord.row - 1, col: runner.coord.col },
-                        Direction::East => Coord { row: runner.coord.row, col: runner.coord.col + 1 },
-                        Direction::South => Coord { row: runner.coord.row + 1, col: runner.coord.col },
-                        Direction::West => Coord { row: runner.coord.row, col: runner.coord.col - 1 },
-                    };
-                    let mut new_runner = runner.clone();
-                    new_runner.coord = new_coord;
-                    new_runner.direction = new_direction;
-                    runners.push(new_runner);
-                }
-            }
-        }
+    //     while runners.len() > 0 {
+    //         // dbg!(&runners);
+    //         let runner = runners.pop().unwrap();
+    //         let coorddir = CoordDir(runner.coord, runner.direction);
+    //         if seen_from_direction.contains(&coorddir) {
+    //             continue;
+    //         }
+    //         seen_from_direction.insert(coorddir);
+    //         plane.visit_by(&runner);
+    //         // println!("\n{plane}\n");
+    //         let at_location = plane.get(&runner.coord);
+    //         if let Some(at_location) = at_location {
+    //             visited.insert(runner.coord);
+    //             let new_directions = runner.clone().direction.reflect(*at_location);
+    //             // dbg!(&new_directions);
+    //             for new_direction in new_directions {
+    //                 let new_coord = match new_direction {
+    //                     Direction::North => Coord { row: runner.coord.row - 1, col: runner.coord.col },
+    //                     Direction::East => Coord { row: runner.coord.row, col: runner.coord.col + 1 },
+    //                     Direction::South => Coord { row: runner.coord.row + 1, col: runner.coord.col },
+    //                     Direction::West => Coord { row: runner.coord.row, col: runner.coord.col - 1 },
+    //                 };
+    //                 let mut new_runner = runner.clone();
+    //                 new_runner.coord = new_coord;
+    //                 new_runner.direction = new_direction;
+    //                 runners.push(new_runner);
+    //             }
+    //         }
+    //     }
 
-        visited.len()
-    })
-    .max().unwrap()
-    .to_string()
+    //     visited.len()
+    // })
+    // .max().unwrap()
+    // .to_string()
 }
 
 #[cfg(test)]
