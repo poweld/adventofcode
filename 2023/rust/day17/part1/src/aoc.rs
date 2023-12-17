@@ -1,10 +1,15 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap, VecDeque};
 use std::hash::Hash;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct Coord {
     row: i64,
     col: i64,
+}
+impl Coord {
+    fn manhattan_distance(&self, to: &Coord) -> u64 {
+        self.row.abs_diff(to.row) + self.col.abs_diff(to.col)
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -86,6 +91,22 @@ enum Direction {
 struct Runner {
     coord: Coord,
     direction: Direction,
+}
+
+fn reconstruct_path(came_from: HashMap<Coord, Coord>, current: Coord) -> Vec<Coord> {
+    let mut total_path = VecDeque::from([current]);
+    while came_from.contains(current) {
+        let current = came_from.get(current).last().unwrap();
+        total_path.push_front(current);
+    }
+    Vec::from(total_path)
+}
+fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
+    let h = |from: Coord| from.manhattan_distance(goal);
+    let mut open_set: HashSet<Coord> = HashSet::from([*start]);
+    let mut came_from: HashMap<Coord, Coord> = HashMap::new();
+    let mut gscore: HashMap<Coord, u64> = HashMap::from([(start, 0)]);
+    let fscore: HashMap<Coord, u64> = HashMap::from([(start)]);
 }
 
 pub fn solve(input_path: &str) -> String {
