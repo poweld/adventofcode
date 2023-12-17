@@ -95,6 +95,16 @@ enum Direction {
     South,
     West,
 }
+impl Direction {
+    fn opposite(self) -> Self {
+        match self {
+            Self::North => Self::South,
+            Self::East => Self::West,
+            Self::South => Self::North,
+            Self::West => Self::East,
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 struct Runner {
@@ -102,25 +112,28 @@ struct Runner {
     direction: Direction,
 }
 
-fn reconstruct_path(came_from: &HashMap<Coord, Coord>, current: &Coord) -> Vec<Coord> {
+fn reconstruct_path(came_from: &HashMap<Coord, VecDeque<CoordDir>>, current: &Coord) -> Vec<Coord> {
     let mut total_path = VecDeque::from([*current]);
     let mut current = current;
     while came_from.contains_key(&current) {
-        current = came_from.get(&current).unwrap();
+        current = &came_from.get(&current)
+            .map(|from| from.into_iter().last())
+            .flatten().unwrap().0;
         total_path.push_front(*current);
     }
     Vec::from(total_path)
 }
+static bignum: u64 = 999_999_999_999; // TODO find a better way to avoid overflowing on addition
 fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     let h = |from: &Coord| from.manhattan_distance(goal);
     let mut open_set: HashSet<Coord> = HashSet::from([*start]);
-    let mut came_from: HashMap<Coord, Coord> = HashMap::new();
+    let mut came_from: HashMap<Coord, VecDeque<CoordDir>> = HashMap::new();
     let mut gscore: HashMap<Coord, u64> = HashMap::from([(*start, 0u64)]);
     let mut fscore: HashMap<Coord, u64> = HashMap::from([(*start, h(start))]);
     let mut count = 0;
     while !open_set.is_empty() {
         let current = {
-            let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&u64::MAX).clone();
+            let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&bignum).clone();
             let mut coords: Vec<&Coord> = open_set.iter().collect();
             coords.sort_by(|a, b| get_fscore(a).cmp(&get_fscore(b)));
             coords[0].clone()
@@ -130,11 +143,30 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
         }
         open_set.remove(&current);
         for CoordDir(neighbor, direction) in plane.neighbors(&current) {
-            let get_gscore = |coord: &Coord| gscore.get(coord).unwrap_or(&u64::MAX).clone();
-            let d = |current, neighbor| plane.get(&neighbor).unwrap();
-            let tentative_gscore = get_gscore(&current) + d(current, neighbor);
+            let get_gscore = |coord: &Coord| gscore.get(coord).unwrap_or(&bignum).clone();
+            let d = |current, neighbor| {
+                let came_from_entry = came_from.get(current);
+                if let Some(came_from_entry) = came_from_entry {
+                    dbg!(&came_from_entry);
+                    if came_from_entry.len() == 2 {
+                        println!("here!!!");
+                    }
+                    if came_from_entry.len() == 2 && came_from_entry.iter().all(|CoordDir(_, came_from_dir)| came_from_dir == &direction) {
+                        return &bignum;
+                    }
+                }
+                return plane.get(&neighbor).unwrap();
+            };
+            let tentative_gscore = get_gscore(&current) + d(&current, neighbor);
             if tentative_gscore < get_gscore(&neighbor) {
-                came_from.insert(neighbor, current);
+                let current_coorddir = CoordDir(current, direction);
+                let mut neighbor_came_from = came_from.get(&current).unwrap_or(&VecDeque::new()).clone();
+                neighbor_came_from.push_back(current_coorddir);
+                if neighbor_came_from.len() > 2 {
+                    neighbor_came_from.pop_front();
+                }
+                dbg!(&neighbor_came_from);
+                came_from.insert(neighbor, neighbor_came_from);
                 gscore.insert(neighbor, tentative_gscore);
                 fscore.insert(neighbor, tentative_gscore + h(&neighbor));
                 if !open_set.contains(&neighbor) {
@@ -148,11 +180,16 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
 
 pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
-    let ParseResult { plane } = parse(&input);
+    let ParseResult { mut plane } = parse(&input);
     println!("{plane}\n");
     let start = Coord { row: 0, col: 0 };
+    // let goal = Coord { row: 0, col: 3 };
     let goal = Coord { row: (plane.rows() as i64) - 1, col: (plane.cols() as i64) - 1 };
     let result = dbg!(astar(&start, &goal, &plane));
+    for coord in result.iter() {
+        plane.set(&coord, 0);
+    }
+    println!("{plane}\n");
     result.len().to_string()
 }
 
