@@ -103,12 +103,10 @@ struct Runner {
 }
 
 fn reconstruct_path(came_from: &HashMap<Coord, Coord>, current: &Coord) -> Vec<Coord> {
-    dbg!(&came_from, &current);
     let mut total_path = VecDeque::from([*current]);
     let mut current = current;
     while came_from.contains_key(&current) {
         current = came_from.get(&current).unwrap();
-        dbg!(&current);
         total_path.push_front(*current);
     }
     Vec::from(total_path)
@@ -121,7 +119,6 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     let mut fscore: HashMap<Coord, u64> = HashMap::from([(*start, h(start))]);
     let mut count = 0;
     while !open_set.is_empty() {
-        dbg!(&open_set);
         let current = {
             let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&u64::MAX).clone();
             let mut coords: Vec<&Coord> = open_set.iter().collect();
@@ -154,7 +151,7 @@ pub fn solve(input_path: &str) -> String {
     println!("{plane}\n");
     let start = Coord { row: 0, col: 0 };
     let goal = Coord { row: (plane.rows() as i64) - 1, col: (plane.cols() as i64) - 1 };
-    dbg!(astar(&start, &goal, &plane)); // shorter test
+    dbg!(astar(&start, &goal, &plane));
     todo!()
     // let init_coords = std::iter::once(CoordDir(Coord { row: 0, col: 0 }, Direction::East));
     // init_coords.map(|init_coorddir| {
