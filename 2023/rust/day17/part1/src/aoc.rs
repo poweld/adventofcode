@@ -20,7 +20,7 @@ struct Plane(Vec<Vec<u64>>);
 impl std::fmt::Display for Plane {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let s = self.0.iter().map(|digits| digits.iter()
-            .map(|digit| char::from_digit(num, 10).expect("failed to parse digit: {digit}"))
+            .map(|digit| char::from_digit(*digit as u32, 10).expect("failed to parse digit: {digit}"))
             .collect::<String>()).collect::<Vec<_>>().join("\n");
         write!(f, "{}", s)
     }
@@ -83,7 +83,7 @@ struct ParseResult {
 
 fn parse(input: &str) -> ParseResult {
     let plane_data: Vec<Vec<u64>> = input.lines()
-        .map(|line| line.chars().map(|c| c.to_digit().unwrap()).collect::<Vec<_>>())
+        .map(|line| line.chars().map(|c| (c.to_digit(10).unwrap()) as u64).collect::<Vec<_>>())
         .collect();
     ParseResult { plane: Plane(plane_data) }
 }
@@ -104,7 +104,7 @@ struct Runner {
 
 fn reconstruct_path(came_from: HashMap<Coord, Coord>, current: Coord) -> Vec<Coord> {
     let mut total_path = VecDeque::from([current]);
-    while came_from.contains(current) {
+    while came_from.contains_key(&current) {
         let current = came_from.get(&current).unwrap();
         total_path.push_front(*current);
     }
@@ -115,26 +115,26 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     let mut open_set: HashSet<Coord> = HashSet::from([*start]);
     let mut came_from: HashMap<Coord, Coord> = HashMap::new();
     let mut gscore: HashMap<Coord, u64> = HashMap::from([(*start, 0u64)]);
-    let get_gscore = |coord: &Coord| gscore.get(neighbor).unwrap_or(&u64::MAX);
-    let fscore: HashMap<Coord, u64> = HashMap::from([(*start, h(start))]);
-    let get_fscore = |coord: &Coord| fscore.get(neighbor).unwrap_or(&u64::MAX);
+    let get_gscore = |coord: &Coord| gscore.get(coord).unwrap_or(&u64::MAX);
+    let mut fscore: HashMap<Coord, u64> = HashMap::from([(*start, h(start))]);
+    let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&u64::MAX);
     while open_set.len() > 0 {
-        let mut coord_and_fscores = current = open_set.iter()
+        let mut coord_and_fscores = open_set.iter()
             .map(|coord| (coord, get_fscore(coord)))
             .collect::<Vec<_>>();
         coord_and_fscores.sort_by(|(_, a), (_, b)| a.cmp(b));
-        coord_and_fscores.into_iter()
+        let current = coord_and_fscores.into_iter()
             .map(|(coord, _)| coord)
             .last()
             .unwrap();
         if current == goal {
-            return reconstruct_path(came_from, current);
+            return reconstruct_path(came_from, *current);
         }
         open_set.remove(current);
         for neighbor in plane.neighbors(&current) {
             let tentative_gscore = get_gscore(&current);
             if tentative_gscore < get_gscore(&neighbor) {
-                came_from.insert(neighbor, current);
+                came_from.insert(neighbor, *current);
                 gscore.insert(neighbor, *tentative_gscore);
                 fscore.insert(neighbor, tentative_gscore + h(&neighbor));
                 if !open_set.contains(&neighbor) {
