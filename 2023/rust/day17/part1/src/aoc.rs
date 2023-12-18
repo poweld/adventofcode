@@ -16,6 +16,12 @@ impl Coord {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct CoordDir(Coord, Direction);
 
+struct Edge {
+    node: usize,
+    cost: usize,
+    direction: Direction,
+}
+
 #[derive(Debug, Clone)]
 struct Plane(Vec<Vec<u64>>);
 impl std::fmt::Display for Plane {
@@ -75,6 +81,21 @@ impl Plane {
             })
         }).collect::<Vec<_>>()
     }
+    // fn to_edges(&self) -> Vec<Vec<Edge>> {
+    //     self.coords().into_iter()
+    //         .map(|coord| {
+    //             self.neighbors(&coord).into_iter()
+    //                 .map(|neighbor_coorddir| {
+    //                     Edge {
+    //                         node: (coord.row * self.cols() + coord.col),
+    //                         cost: self.get(&neighbor_coorddir.0).unwrap(),
+    //                         direction: 
+    //                     }
+    //                 })
+    //                 .collect::<Vec<_>>()
+    //         })
+    //         .collect::<Vec<_>>()
+    // }
 }
 
 #[derive(Debug)]
@@ -173,23 +194,23 @@ struct State {
     position: Coord,
     direction_count: Option<(Direction, u8)>,
 }
-impl Ord for State {
-    fn cmp(&self, other: &Self) -> Ordering {
-        other.cost.cmp(&self.cost)
-            .then_with(|| self.position.cmp(&other.position))
-    }
-}
-impl PartialOrd for State {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
+// impl Ord for State {
+//     fn cmp(&self, other: &Self) -> Ordering {
+//         other.cost.cmp(&self.cost)
+//             .then_with(|| self.position.cmp(&other.position))
+//     }
+// }
+// impl PartialOrd for State {
+//     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+//         Some(self.cmp(other))
+//     }
+// }
 
 fn dijkstra(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
-    let mut dist: Vec<_> = (0..plane.rows()).map(|_| u64::MAX).collect();
-    let mut heap = BinaryHeap::new();
-    dist[start] = 0;
-    heap.push(State { cost: 0, position: *start, direction_count: None });
+    // let mut dist: Vec<_> = (0..plane.rows()).map(|_| u64::MAX).collect();
+    // let mut heap = BinaryHeap::new();
+    // dist[start] = 0;
+    // heap.push(State { cost: 0, position: *start, direction_count: None });
     todo!()
 }
 
@@ -201,8 +222,8 @@ pub fn solve(input_path: &str) -> String {
     let start = Coord { row: 0, col: 0 };
     // let goal = Coord { row: 0, col: 3 };
     let goal = Coord { row: (plane.rows() as i64) - 1, col: (plane.cols() as i64) - 1 };
-    // let result = dbg!(astar(&start, &goal, &plane));
-    let result = dbg!(dijkstra(&start, &goal, &plane));
+    let result = dbg!(astar(&start, &goal, &plane));
+    // let result = dbg!(dijkstra(&start, &goal, &plane));
     result.iter()
         .skip(1)
         .map(|coord| plane.get(&coord).unwrap())
