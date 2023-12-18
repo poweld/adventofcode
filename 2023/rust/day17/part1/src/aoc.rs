@@ -17,21 +17,19 @@ impl Coord {
 struct CoordDir(Coord, Direction);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct CoordDir2(Coord, VecDeque<Direction>);
+struct CoordDir2(Coord, Option<Direction>, Option<Direction>);
     // dir_minus_one: Option<Direction>,
     // dir_minus_two: Option<Direction>,
 impl CoordDir2 {
     fn new(coord: &Coord) -> Self {
-        Self(coord.clone(), VecDeque::new())
+        Self(coord.clone(), None, None)
     }
     fn push_dir(&mut self, dir: Direction) {
-        self.1.push_back(dir);
-        if self.1.len() > 2 {
-            self.1.pop_front();
-        }
+        self.1 = self.2;
+        self.2 = Some(dir);
     }
     fn all_dirs_equal(&self, dir: &Direction) -> bool {
-        self.1.iter().all(|my_dir| dir == my_dir)
+        self.1.is_some() && self.2.is_some() && self.1.unwrap() == *dir && self.2.unwrap() == *dir
     }
 }
 
@@ -173,6 +171,7 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     let mut fscore: HashMap<CoordDir2, u64> = HashMap::from([(CoordDir2::new(start), heuristic(start))]);
     let mut count = 0;
     while !open_set.is_empty() {
+        dbg!(&came_from);
         // dbg!(&gscore, &fscore);
         let current = {
             let get_fscore = |coord: &CoordDir2| fscore.get(coord).unwrap_or(&u64::MAX).clone();
@@ -184,20 +183,21 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
             return reconstruct_path(&came_from, &current);
         }
         open_set.remove(&current);
-        let current_previous_dir = current.1.get(0);
+        let current_previous_dir = current.2;
         for CoordDir(neighbor, dir) in plane.neighbors(&current.0) {
             let get_gscore = |coord: &CoordDir2| gscore.get(coord).unwrap_or(&u64::MAX).clone();
             let distance = |current: CoordDir2, neighbor| {
+                //dbg!(&current);
                 if current.all_dirs_equal(&dir) {
                     // Attempting three moves in a row in the same direction
-                    return 999999999u64;  // Doesn't seem like this works properly :(
+                    return 9900009999999u64;  // Doesn't seem like this works properly :(
                 }
                 return *plane.get(&neighbor).unwrap()
             };
             let tentative_gscore = get_gscore(&current) + distance(current.clone(), neighbor);
             let mut neighbor_coorddir2 = CoordDir2::new(&neighbor);
             if let Some(current_previous_dir) = current_previous_dir {
-                neighbor_coorddir2.push_dir(*current_previous_dir);
+                neighbor_coorddir2.push_dir(current_previous_dir);
             }
             neighbor_coorddir2.push_dir(dir);
             if tentative_gscore < get_gscore(&neighbor_coorddir2) {
