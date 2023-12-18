@@ -1,5 +1,6 @@
-use std::collections::{HashSet, HashMap, VecDeque};
+use std::collections::{HashSet, HashMap, VecDeque, BinaryHeap};
 use std::hash::Hash;
+use std::cmp::Ordering;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct Coord {
@@ -111,6 +112,7 @@ fn reconstruct_path(came_from: &HashMap<Coord, CoordDir>, current: &Coord) -> Ve
     }
     Vec::from(total_path)
 }
+
 fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     let heuristic = |from: &Coord| from.manhattan_distance(goal);
     let mut open_set: HashSet<Coord> = HashSet::from([*start]);
@@ -119,6 +121,7 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     let mut fscore: HashMap<Coord, u64> = HashMap::from([(*start, heuristic(start))]);
     let mut count = 0;
     while !open_set.is_empty() {
+        dbg!(&gscore, &fscore);
         let current = {
             let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&u64::MAX).clone();
             let mut coords: Vec<&Coord> = open_set.iter().collect();
@@ -136,7 +139,7 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
                 let two_back = previous.and_then(|previous| came_from.get(&previous.0));
                 if [previous, two_back].into_iter().all(|prev| prev.is_some() && prev.unwrap().1 == dir) {
                     // Attempting three moves in a row in the same direction
-                    return 999999999u64;
+                    return 999999999u64;  // Doesn't seem like this works properly :(
                 }
                 return *plane.get(&neighbor).unwrap()
             };
@@ -154,13 +157,40 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     panic!("open open set, but goal was never reached");
 }
 
+#[derive(Copy, Clone, PartialEq, Eq)]
+struct State {
+    cost: u64,
+    position: Coord,
+    direction_count: Option<(Direction, u8)>,
+}
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.cost.cmp(&self.cost)
+            .then_with(|| self.position.cmp(&other.position))
+    }
+}
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+fn dijkstra(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
+    let mut dist: Vec<_> = (0..plane.rows()).map(|_| u64::MAX).collect();
+    let mut heap = BinaryHeap::new();
+    dist[start] = 0;
+    heap.push(State { cost: 0, position: *start, direction_count: None });
+    todo!()
+}
+
 pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
     let ParseResult { plane } = parse(&input);
     println!("{plane}\n");
     let start = Coord { row: 0, col: 0 };
     let goal = Coord { row: (plane.rows() as i64) - 1, col: (plane.cols() as i64) - 1 };
-    let result = dbg!(astar(&start, &goal, &plane));
+    // let result = dbg!(astar(&start, &goal, &plane));
+    let result = dbg!(dijkstra(&start, &goal, &plane));
     result.iter()
         .skip(1)
         .map(|coord| plane.get(&coord).unwrap())
