@@ -262,7 +262,7 @@ mod tests {
 
     #[test]
     fn solve_test() {
-        let result = solve("data/test_input.txt");
+        let result = solve("data/test_input.txt", 1, 1);
         println!("result: {result}");
         assert_eq!(result, 102.to_string());
     }
