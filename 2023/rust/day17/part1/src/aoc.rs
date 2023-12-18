@@ -133,7 +133,7 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     while !open_set.is_empty() {
         dbg!(&gscore, &fscore);
         let current = {
-            let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&bignum).clone();
+            let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&u64::MAX).clone();
             let mut coords: Vec<&Coord> = open_set.iter().collect();
             coords.sort_by(|a, b| get_fscore(a).cmp(&get_fscore(b)));
             coords[0].clone()
