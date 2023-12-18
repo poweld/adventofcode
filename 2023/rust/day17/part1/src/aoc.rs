@@ -1,5 +1,6 @@
-use std::collections::{HashSet, HashMap, VecDeque};
+use std::collections::{HashSet, HashMap, VecDeque, BinaryHeap};
 use std::hash::Hash;
+use std::cmp::Ordering;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 struct Coord {
@@ -112,25 +113,25 @@ struct Runner {
     direction: Direction,
 }
 
-fn reconstruct_path(came_from: &HashMap<Coord, VecDeque<CoordDir>>, current: &Coord) -> Vec<Coord> {
+fn reconstruct_path(came_from: &HashMap<Coord, CoordDir>, current: &Coord) -> Vec<Coord> {
     let mut total_path = VecDeque::from([*current]);
     let mut current = current;
     while came_from.contains_key(&current) {
-        current = &came_from.get(&current)
-            .map(|from| from.into_iter().last())
-            .flatten().unwrap().0;
+        current = &came_from.get(&current).unwrap().0;
         total_path.push_front(*current);
     }
     Vec::from(total_path)
 }
-static bignum: u64 = 999_999_999_999; // TODO find a better way to avoid overflowing on addition
-fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> (Vec<Coord>) {
+
+fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
     let heuristic = |from: &Coord| from.manhattan_distance(goal);
     let mut open_set: HashSet<Coord> = HashSet::from([*start]);
-    let mut came_from: HashMap<Coord, VecDeque<CoordDir>> = HashMap::new();
+    let mut came_from: HashMap<Coord, CoordDir> = HashMap::new();
     let mut gscore: HashMap<Coord, u64> = HashMap::from([(*start, 0u64)]);
     let mut fscore: HashMap<Coord, u64> = HashMap::from([(*start, heuristic(start))]);
+    let mut count = 0;
     while !open_set.is_empty() {
+        dbg!(&gscore, &fscore);
         let current = {
             let get_fscore = |coord: &Coord| fscore.get(coord).unwrap_or(&bignum).clone();
             let mut coords: Vec<&Coord> = open_set.iter().collect();
@@ -141,31 +142,20 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> (Vec<Coord>) {
             return reconstruct_path(&came_from, &current);
         }
         open_set.remove(&current);
-        for CoordDir(neighbor, direction) in plane.neighbors(&current) {
-            let get_gscore = |coord: &Coord| gscore.get(coord).unwrap_or(&bignum).clone();
+        for CoordDir(neighbor, dir) in plane.neighbors(&current) {
+            let get_gscore = |coord: &Coord| gscore.get(coord).unwrap_or(&u64::MAX).clone();
             let distance = |current, neighbor| {
-                let came_from_entry = came_from.get(current);
-                if let Some(came_from_entry) = came_from_entry {
-                    if came_from_entry.len() == 2 && came_from_entry.iter().all(|CoordDir(_, came_from_dir)| came_from_dir == &direction) {
-                        println!("can't go in the same dir 3 times");
-                        dbg!(&came_from_entry, &direction);
-                        return &bignum;
-                    }
+                let previous = came_from.get(&current);
+                let two_back = previous.and_then(|previous| came_from.get(&previous.0));
+                if [previous, two_back].into_iter().all(|prev| prev.is_some() && prev.unwrap().1 == dir) {
+                    // Attempting three moves in a row in the same direction
+                    return 999999999u64;  // Doesn't seem like this works properly :(
                 }
-                return dbg!(plane.get(&neighbor).unwrap());
+                return *plane.get(&neighbor).unwrap()
             };
-            let tentative_gscore = get_gscore(&current) + distance(&current, neighbor);
-            dbg!(&tentative_gscore);
+            let tentative_gscore = get_gscore(&current) + distance(current, neighbor);
             if tentative_gscore < get_gscore(&neighbor) {
-                println!("chosen gscore: {tentative_gscore}");
-                let current_coorddir = CoordDir(current, direction);
-                let mut neighbor_came_from = came_from.get(&current).unwrap_or(&VecDeque::new()).clone();
-                neighbor_came_from.push_back(current_coorddir);
-                if neighbor_came_from.len() > 2 {
-                    neighbor_came_from.pop_front();
-                }
-                dbg!(&neighbor_came_from);
-                came_from.insert(neighbor, neighbor_came_from);
+                came_from.insert(neighbor, CoordDir(current, dir));
                 gscore.insert(neighbor, tentative_gscore);
                 fscore.insert(neighbor, tentative_gscore + heuristic(&neighbor));
                 if !open_set.contains(&neighbor) {
@@ -177,6 +167,32 @@ fn astar(start: &Coord, goal: &Coord, plane: &Plane) -> (Vec<Coord>) {
     panic!("open open set, but goal was never reached");
 }
 
+#[derive(Copy, Clone, PartialEq, Eq)]
+struct State {
+    cost: u64,
+    position: Coord,
+    direction_count: Option<(Direction, u8)>,
+}
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.cost.cmp(&self.cost)
+            .then_with(|| self.position.cmp(&other.position))
+    }
+}
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+fn dijkstra(start: &Coord, goal: &Coord, plane: &Plane) -> Vec<Coord> {
+    let mut dist: Vec<_> = (0..plane.rows()).map(|_| u64::MAX).collect();
+    let mut heap = BinaryHeap::new();
+    dist[start] = 0;
+    heap.push(State { cost: 0, position: *start, direction_count: None });
+    todo!()
+}
+
 pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
     let ParseResult { plane } = parse(&input);
@@ -185,12 +201,8 @@ pub fn solve(input_path: &str) -> String {
     let start = Coord { row: 0, col: 0 };
     // let goal = Coord { row: 0, col: 3 };
     let goal = Coord { row: (plane.rows() as i64) - 1, col: (plane.cols() as i64) - 1 };
-    let result = dbg!(astar(&start, &goal, &plane));
-    let mut newplane = plane.clone();
-    for coord in result.iter() {
-        newplane.set(&coord, 0);
-    }
-    println!("{newplane}\n");
+    // let result = dbg!(astar(&start, &goal, &plane));
+    let result = dbg!(dijkstra(&start, &goal, &plane));
     result.iter()
         .skip(1)
         .map(|coord| plane.get(&coord).unwrap())
