@@ -19,8 +19,10 @@ struct PulseCounter {
     low: u64,
     high: u64,
 }
-impl Module for PulseCounter {
+impl PulseCounter {
     fn new() -> Self { PulseCounter { low: 0, high: 0 } }
+}
+impl Module for PulseCounter {
     fn handle_pulse(&mut self, pulse: &Pulse) {
         match pulse {
             &Pulse::Low(_) => self.low += 1,
@@ -37,13 +39,15 @@ struct Broadcast {
     counter: PulseCounter,
     connected_to: Vec<&dyn Module>,
 }
-impl Module for Broadcast {
+impl Broadcast {
     fn new() -> Self {
         let name = String::from("broadcaster");
         let counter = PulseCounter::new();
         let connected_to = vec![];
         Self { name, counter, connected_to }
     }
+}
+impl Module for Broadcast {
     fn handle_pulse(&mut self, pulse: &Pulse) {
         self.counter.handle_pulse(&pulse);
     }
@@ -59,7 +63,7 @@ struct FlipFlip {
     connected_to: Vec<&dyn Module>,
     is_on: bool,
 }
-impl Module for FlipFlip {
+impl FlipFlop {
     fn new(name: &str) -> Self {
         let name = name.to_string();
         let counter = PulseCounter::new();
@@ -67,6 +71,8 @@ impl Module for FlipFlip {
         let is_on = false;
         Self { name, counter, connected_to, is_on }
     }
+}
+impl Module for FlipFlip {
     fn handle_pulse(&mut self, pulse: &Pulse) {
         self.counter.handle_pulse(&pulse);
         pulse match {
@@ -98,7 +104,7 @@ struct Conjunction {
     connected_to: Vec<&dyn Module>,
     most_recent_pulses: HashMap<String, Pulse>,
 }
-impl Module for Conjunction {
+impl Conjunction {
     fn new(name: &str) -> Self {
         let name = name.to_string();
         let counter = PulseCounter::new();
@@ -106,16 +112,21 @@ impl Module for Conjunction {
         let most_recent_pulses = HashMap::new();
         Self { name, counter, connected_to, most_recent_pulses }
     }
+}
+impl Module for Conjunction {
     fn handle_pulse(&mut self, pulse: &Pulse) {
         self.counter.handle_pulse(&pulse);
-        let sender_name = pulse.0.clone();
-        self.most_recent_pulses.insert(sender_name, pulse.clone());
-        if self.most_recent_pulses.values().all(|pulse| matches!(pulse, Pulse::High(_))) {
-            self.connected_to.iter()
-                .for_each(|connected_to| connected_to.handle_pulse(&Pulse::Low(self.name.clone())))
-        } else {
-            self.connected_to.iter()
-                .for_each(|connected_to| connected_to.handle_pulse(&Pulse::High(self.name.clone())))
+        match pulse {
+            Pulse::High(sender_name) | Pulse::Low(sender_name) => {
+                self.most_recent_pulses.insert(sender_name.clone(), pulse.clone());
+                if self.most_recent_pulses.values().all(|pulse| matches!(pulse, Pulse::High(_))) {
+                    self.connected_to.iter()
+                        .for_each(|connected_to| connected_to.handle_pulse(&Pulse::Low(self.name.clone())))
+                } else {
+                    self.connected_to.iter()
+                        .for_each(|connected_to| connected_to.handle_pulse(&Pulse::High(self.name.clone())))
+                }
+            }
         }
     }
     fn low_pulses_received(&self) -> u64 { self.counter.low }
