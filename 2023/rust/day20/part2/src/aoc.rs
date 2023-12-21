@@ -79,7 +79,7 @@ mod my {
         pub fn parents(&self, node: NodeIndex) -> Parents {
             Parents { graph: &self, edge: self.nodes[node].first_backward_edge }
         }
-        pub fn send_pulse(&mut self, source: NodeIndex, dest: NodeIndex, pulse: Pulse) {
+        pub fn send_pulse(&mut self, source: NodeIndex, dest: NodeIndex, pulse: Pulse) -> bool {
             let mut pulse_queue: VecDeque<(NodeIndex, NodeIndex, Pulse)> = VecDeque::new();
             pulse_queue.push_back((source, dest, pulse));
             while !pulse_queue.is_empty() {
@@ -92,6 +92,9 @@ mod my {
                 // Can this be worked around in a better way?
                 let parents: Vec<NodeIndex> = self.parents(dest).collect();
                 let module = &mut self.nodes[dest].module;
+                if module == &Module::Inert(String::from("rx")) && pulse == Pulse::Low {
+                    return true;
+                }
                 match module {
                     Module::Broadcast => {
                         let neighbors: Vec<NodeIndex> = self.neighbors(dest).collect();
@@ -133,6 +136,7 @@ mod my {
                     _ => (),
                 }
             }
+            return false;
         }
         pub fn low_pulse_count(&self) -> u64 {
             self.low_pulse_count
@@ -178,7 +182,7 @@ mod my {
         }
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq)]
     pub enum Module {
         Broadcast,
         FlipFlop(String, bool),
@@ -268,10 +272,13 @@ pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
     let ParseResult { nodes, mut graph } = parse(&input);
     let broadcaster = nodes.get(&String::from("broadcaster")).unwrap();
-    for _ in 0..1000 {
-        graph.send_pulse(0, *broadcaster, Pulse::Low);
+    let mut done = false;
+    let mut presses = 0u64;
+    while !done {
+        presses += 1;
+        done = graph.send_pulse(0, *broadcaster, Pulse::Low);
     }
-    (graph.low_pulse_count() * graph.high_pulse_count()).to_string()
+    presses.to_string()
 }
 
 #[cfg(test)]
