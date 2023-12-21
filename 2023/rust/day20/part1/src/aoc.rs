@@ -6,6 +6,7 @@ mod my {
 
     #[derive(Debug)]
     pub struct NodeData {
+        // Singly linked lists
         first_forward_edge: Option<EdgeIndex>,
         first_backward_edge: Option<EdgeIndex>,
         module: Module,
@@ -32,7 +33,6 @@ mod my {
 
     #[derive(Debug)]
     pub struct Graph {
-        // Singly linked lists
         nodes: Vec<NodeData>,
         forward_edges: Vec<EdgeData>,
         backward_edges: Vec<EdgeData>,
