@@ -7,37 +7,35 @@ struct Game {
 }
 
 fn parse_line(line: &str) -> Game {
-    let game_and_rounds: Vec<&str> = line.split(": ").collect();
-    let id = game_and_rounds[0]
-        .split_whitespace()
+    let (game, rounds) = line.split_once(": ").unwrap();
+    let id = game.split_whitespace()
         .last()
         .map(|s| s.parse::<u32>().ok())
         .flatten()
         .unwrap();
-    let rounds = game_and_rounds[1].split("; ");
-    let round_counts = rounds.map(|round| {
-        let entries = round.split(", ");
-        entries
-            .map(|entry| entry.split_whitespace().collect::<Vec<_>>())
-            .map(|count_and_color| {
-                let count = count_and_color[0].parse::<u32>().unwrap();
-                let color = count_and_color[1].to_string();
-                (color, count)
-            })
-            .collect()
-    }).collect();
+    let round_counts = rounds.split("; ")
+        .map(|round| {
+            round.split(", ")
+                .map(|entry| entry.split_once(' ').unwrap())
+                .map(|(count, color)| {
+                    let count = count.parse::<u32>().unwrap();
+                    let color = color.to_string();
+                    (color, count)
+                })
+                .collect()
+        }).collect();
     Game { id, round_counts }
 }
 
 pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
-    let limits = [(12, "red"), (13, "green"), (14, "blue")];
+    let limits = [(12, String::from("red")), (13, String::from("green")), (14, String::from("blue"))];
     input.lines()
         .map(parse_line)
         .filter(|game| {
             game.round_counts.iter().all(|round_count| {
                 limits.iter().all(|(limit, color)| {
-                    round_count.get(&color[..]).unwrap_or_else(|| &0) <= limit
+                    round_count.get(color).unwrap_or(&0) <= limit
                 })
             })
         })
