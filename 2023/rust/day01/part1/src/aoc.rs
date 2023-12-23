@@ -10,9 +10,8 @@ pub fn solve(input_path: &str) -> String {
         .map(|chars| {
             let first = chars.clone().find(is_digit_char).unwrap();
             let last = chars.clone().rfind(is_digit_char).unwrap();
-            format!("{}{}", first, last)
+            first.to_digit(10).unwrap() * 10 + last.to_digit(10).unwrap()
         })
-        .map(|num_string| num_string.parse::<u32>().unwrap())
         .sum::<u32>()
         .to_string()
 }
