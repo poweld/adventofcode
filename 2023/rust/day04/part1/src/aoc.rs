@@ -21,13 +21,11 @@ impl Card {
 }
 
 fn parse_line(line: &str) -> Card {
-    let mut header_and_rest = line.split(": ");
-    let id = header_and_rest.next().unwrap()
-        .split_whitespace()
+    let (header, rest) = line.split_once(": ").unwrap();
+    let id = header.split_whitespace()
         .last().unwrap()
         .parse::<u32>().unwrap();
-    let mut winning_and_given_nums = header_and_rest.next().unwrap()
-        .split(" | ")
+    let mut winning_and_given_nums = rest.split(" | ")
         .map(|nums| {
             nums.split_whitespace()
                 .map(|num| num.parse::<u32>().expect("failed to parse num: {num}"))
