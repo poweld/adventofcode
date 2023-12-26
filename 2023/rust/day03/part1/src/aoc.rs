@@ -1,38 +1,38 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
+
+#[derive(Debug, Clone, PartialEq)]
+struct Coord {
+    row: usize,
+    col: usize,
+}
 
 #[derive(Debug)]
 struct Board {
     rows: usize,
     cols: usize,
-    chars: Vec<Vec<char>>,
 }
 impl Board {
-    fn new(rows: usize, cols: usize, data: &str) -> Self {
-        let chars: Vec<Vec<char>> = data.lines()
-            .map(|line| line.chars().collect())
-            .collect();
-        Self { rows, cols, chars }
+    fn new(rows: usize, cols: usize) -> Self {
+        Self { rows, cols }
     }
-    fn get(&self, row: usize, col: usize) -> Option<char> {
-        self.chars.get(row)?.get(col).copied()
-    }
-    // This could be better
-    fn neighbors(&self, row: usize, col: usize) -> Vec<char> {
-        let start_row = match row {
+    fn row_range_neighbors(&self, coord_a: &Coord, coord_b: &Coord) -> Vec<Coord> {
+        let start_row = match coord_a.row {
             0 => 0,
             row => row - 1,
         };
-        let end_row = std::cmp::min(row + 1, self.rows - 1);
-        let start_col = match col {
+        let end_row = std::cmp::min(coord_b.row + 1, self.rows - 1);
+        let start_col = match coord_a.col {
             0 => 0,
             col => col - 1,
         };
-        let end_col = std::cmp::min(col + 1, self.cols - 1);
+        let end_col = std::cmp::min(coord_b.col + 1, self.cols - 1);
+        let in_num_cols = coord_a.col..=coord_b.col;
         (start_row..=end_row)
             .flat_map(|current_row| {
+                let cols = in_num_cols.clone();
                 (start_col..=end_col)
-                    .filter(move |current_col| current_row != row || current_col != &col)
-                    .map(move |current_col| self.get(current_row, current_col).unwrap())
+                    .filter(move |current_col| current_row != coord_a.row || !cols.contains(&current_col))
+                    .map(move |current_col| Coord { row: current_row, col: current_col })
             })
             .collect()
     }
@@ -45,47 +45,60 @@ fn dimensions(input: &str) -> (usize, usize) {
     (rows, cols)
 }
 
-fn parse(input: &str) -> Board {
-    let (rows, cols) = dimensions(input);
-    Board::new(rows, cols, input)
+struct ParseOutput {
+    symbols: HashMap<char, Vec<Coord>>,
+    nums: Vec<(usize, (Coord, Coord))>,
+    board: Board,
 }
 
-static DIGIT_CHARS: &str = "0123456789";
-pub fn solve(input_path: &str) -> String {
-    let input = std::fs::read_to_string(input_path).unwrap();
-    let digit_chars_set: HashSet<char> = HashSet::from_iter(DIGIT_CHARS.chars());
-    let is_digit = |c: &char| digit_chars_set.contains(&c);
-    let is_symbol = |c: &char| !is_digit(c) && c != &'.';
-    let board = parse(&input);
-    let mut parts: Vec<u64> = vec![];
-    for row in 0..board.rows {
-        let mut current_num_str = String::new();
-        let mut is_part_number = false;
-        for col in 0..board.cols {
-            let c = board.get(row, col).unwrap();
-            if is_digit(&c) {
-                current_num_str.push(c);
-                if !is_part_number {
-                    is_part_number = board.neighbors(row, col).iter()
-                        .any(is_symbol)
-                } else if col == (board.cols - 1) {
-                    // Make sure to capture if last col
-                    parts.push(current_num_str.parse::<u64>().unwrap());
-                }
+fn parse(input: &str) -> ParseOutput {
+    let (rows, cols) = dimensions(input);
+    let mut symbols: HashMap<char, Vec<Coord>> = HashMap::new();
+    let mut nums: Vec<(usize, (Coord, Coord))> = Vec::new();
+    for (row, line) in input.lines().enumerate() {
+        let mut num_chars: Vec<(char, Coord)> = Vec::new();
+        for (col, c) in line.chars().enumerate() {
+            if c.is_ascii_digit() {
+                let coord = Coord { row, col };
+                num_chars.push((c, coord));
             } else {
-                if current_num_str.len() > 0 {
-                    if is_part_number {
-                        parts.push(current_num_str.parse::<u64>().unwrap());
-                    }
-                    current_num_str = String::new();
+                if c != '.' {
+                    let coord = Coord { row, col };
+                    symbols.entry(c)
+                        .and_modify(|coords| (*coords).push(coord.clone()))
+                        .or_insert(Vec::from([coord]));
                 }
-                is_part_number = false;
+                if num_chars.len() > 0 {
+                    let coord_a = &num_chars.first().unwrap().1;
+                    let coord_b = &num_chars.last().unwrap().1;
+                    let num: usize = num_chars.iter().map(|nc| nc.0).collect::<String>().parse().unwrap();
+                    nums.push((num, (coord_a.clone(), coord_b.clone())));
+                    num_chars = Vec::new();
+                }
             }
         }
+        if num_chars.len() > 0 {
+            let coord_a = &num_chars.first().unwrap().1;
+            let coord_b = &num_chars.last().unwrap().1;
+            let num: usize = num_chars.iter().map(|nc| nc.0).collect::<String>().parse().unwrap();
+            nums.push((num, (coord_a.clone(), coord_b.clone())));
+        }
     }
-    parts.iter()
-        .sum::<u64>()
-        .to_string()
+    let board = Board::new(rows, cols);
+    ParseOutput { symbols, nums, board }
+}
+
+pub fn solve(input_path: &str) -> String {
+    let input = std::fs::read_to_string(input_path).unwrap();
+    let ParseOutput { symbols, nums, board } = parse(&input);
+    let nums_touching_symbols: Vec<usize> = nums.iter()
+        .filter(|(_, (start, end))| {
+            board.row_range_neighbors(&start, &end).iter()
+                .any(|neighbor| symbols.values().any(|coords| coords.contains(neighbor)))
+        })
+        .map(|nc| nc.0)
+        .collect();
+    nums_touching_symbols.iter().sum::<usize>().to_string()
 }
 
 #[cfg(test)]
