@@ -44,15 +44,25 @@ mod my {
         // We're at `start`, with a zero cost
         dist[start] = 0;
         heap.push(State { cost: 0, node: start, directions: VecDeque::new() });
+        let mut shortest: Option<usize> = None;
 
         // Examine the frontier with lower cost nodes first (min-heap)
         while let Some(State { cost, node, directions }) = heap.pop() {
-            // Alternatively we could have continued to find all shortest paths
-            if node == goal { return Some(cost); }
-
             if directions.len() == 3 && directions.iter().all(|d| d == &directions[0]) {
                 continue;
             }
+
+            if node == goal {
+                if let Some(shortest_value) = shortest {
+                    if cost < shortest_value {
+                        shortest.replace(cost);
+                    }
+                } else {
+                    shortest = Some(cost);
+                }
+                continue;
+            }
+            // if node == goal { continue; }
 
             // Important as we may have already found a better way
             if cost > dist[node] { continue; }
@@ -76,8 +86,7 @@ mod my {
             }
         }
 
-        // Goal not reachable
-        None
+        shortest
     }
 
 
@@ -119,8 +128,8 @@ pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
     let graph = parse(&input);
     dbg!(shortest_path(&graph, 0, graph.len() - 1));
-    dbg!(shortest_path(&graph, 0, 5));
-    todo!()
+    // dbg!(shortest_path(&graph, 0, 5));
+    shortest_path(&graph, 0, graph.len() - 1).unwrap().to_string()
 }
 
 #[cfg(test)]
