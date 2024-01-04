@@ -27,8 +27,8 @@ pub fn solve(input_path: &str) -> String {
     let input = std::fs::read_to_string(input_path).unwrap();
     let race = parse(&input);
     (0..=race.time)
-        .map(|charge_time| distance(charge_time, race.time) > race.distance)
-        .filter(|win| *win)
+        .map(|charge_time| distance(charge_time, race.time))
+        .filter(|distance| distance > &race.distance)
         .count()
     .to_string()
 }
