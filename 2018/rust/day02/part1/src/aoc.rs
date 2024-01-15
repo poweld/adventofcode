@@ -23,9 +23,6 @@ pub fn invert_hashmap<K: Hash + Clone, V: Hash + Eq + Clone>(hashmap: &HashMap<K
         inverted.insert(v.clone(), k.clone());
     }
     inverted
-    // hashmap.iter()
-    //     .map(|(k, v)| (v.clone(), k.clone()))
-    //     .collect()
 }
 
 pub fn parse(input: &String) -> Vec<String> {
@@ -44,21 +41,15 @@ pub fn solve(input_path: &str) -> String {
         }
         counter
     }).collect();
-    dbg!(&counters);
     let inverted_count_maps: Vec<HashMap<i64, char>> = counters.into_iter()
         .map(|counter| invert_hashmap(&counter.count_map)).collect();
-    dbg!(&inverted_count_maps);
     let doubles = inverted_count_maps.iter()
         .filter(|m| m.contains_key(&2))
         .count();
-    dbg!(doubles);
     let triples = inverted_count_maps.iter()
         .filter(|m| m.contains_key(&3))
         .count();
-    dbg!(triples);
-    // let triples = inverted_count_maps.get(3).expect("couldn't find triples in inverted hash map");
     (doubles * triples).to_string()
-    // todo!()
 }
 
 #[cfg(test)]
