@@ -1,11 +1,8 @@
 from collections import Counter
 
-INPUT = "../../../input/2024/day01/input.txt"
-TEST_INPUT = "../../../input/2024/day01/test_input.txt"
-
 
 def read_input():
-    with open(INPUT) as file:
+    with open("input.txt") as file:
         lines = [line.rstrip() for line in file]
         return lines
 
