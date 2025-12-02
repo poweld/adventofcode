@@ -1,46 +1,42 @@
-from collections import Counter
-
-
 def read_input():
     with open("input.txt") as file:
         lines = [line.rstrip() for line in file]
         return lines
 
 
+# return: [(direction, amount)]
 def parse_input(input):
-    split = [line.split() for line in input]
-    return [(int(left_value), int(right_value)) for (left_value, right_value) in split]
+    return [(line[0], int(line[1:])) for line in input]
 
 
 def part_1():
     parsed_input = parse_input(read_input())
-    acc = ([], [])
-    [
-        acc := (acc[0] + [left_value], acc[1] + [right_value])
-        for (left_value, right_value) in parsed_input
-    ]
-    (left, right) = acc
-    left.sort()
-    right.sort()
-    distances = [abs(pair[0] - pair[1]) for pair in zip(left, right)]
-    print(sum(distances))
+    dial = 50
+    password = 0
+    for direction, amount in parsed_input:
+        vector = amount if direction == "R" else -1 * amount
+        dial = (dial + vector) % 100
+        if dial == 0:
+            password += 1
+    print(password)
 
 
 def part_2():
     parsed_input = parse_input(read_input())
-    acc = ([], [])
-    [
-        acc := (acc[0] + [left_value], acc[1] + [right_value])
-        for (left_value, right_value) in parsed_input
-    ]
-    (left, right) = acc
-    right_count = Counter()
-    for right_value in right:
-        right_count[right_value] += 1
-    left.sort()
-    right.sort()
-    distances = [left_value * right_count[left_value] for left_value in left]
-    print(sum(distances))
+    dial = 50
+    password = 0
+    for direction, amount in parsed_input:
+        remaining = amount if direction == "R" else -1 * amount
+        while remaining != 0:
+            if remaining > 0:
+                dial = (dial - 1) % 100
+                remaining -= 1
+            else:
+                dial = (dial + 1) % 100
+                remaining += 1
+            if dial == 0:
+                password += 1
+    print(password)
 
 
 if __name__ == "__main__":
