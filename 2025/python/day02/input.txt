@@ -1,0 +1,1 @@
+../../../input/2025/day02/input.txt
